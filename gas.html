@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+  <title>NUPRC Dashboard — Gas Production</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body class="page-gas">
+<div class="wrapper">
+
+  <!-- Header -->
+  <header class="site-header">
+    <div class="header-logo">
+      <img src="NUPRC logo.webp" class="header-logo-img" style="height:38px;width:38px;object-fit:contain;border-radius:50%;">
+    </div>
+    <div class="header-text">
+      <div class="header-title">Nigerian Upstream Petroleum Regulatory Commission</div>
+      <div class="header-subtitle">National Oil &amp; Gas Production Intelligence Dashboard · 2020–2026</div>
+    </div>
+    <div class="header-badge">
+      <span class="badge-dot">●</span> NUPRC Official Data
+    </div>
+  </header>
+
+  <!-- Year Filter (gas data starts 2021) -->
+  <div class="filter-bar">
+    <span class="filter-label">Year</span>
+    <select id="yearFilter" class="year-select">
+      <option value="all">All Years</option>
+    </select>
+  </div>
+
+  <main class="page-content">
+
+    <!-- KPI Cards -->
+    <div class="section-label">Gas Performance Snapshot</div>
+    <div class="kpi-grid">
+
+      <div class="kpi-card">
+        <div class="kpi-label">Total Gas Produced</div>
+        <div class="kpi-value small" id="kpiProduced">—</div>
+        <div class="kpi-badge" id="badgeProduced">2021–2026</div>
+      </div>
+
+      <div class="kpi-card">
+        <div class="kpi-label">Total Gas Utilized</div>
+        <div class="kpi-value small" id="kpiUtilized">—</div>
+        <div class="kpi-badge" id="badgeUtilized">2021–2026</div>
+      </div>
+
+      <div class="kpi-card">
+        <div class="kpi-label">Commercialization Rate</div>
+        <div class="kpi-value small" id="kpiComm">—</div>
+        <div class="kpi-badge" id="badgeComm">vs 100% target</div>
+        <div class="progress-wrap">
+          <div class="progress-fill green" id="commBar" style="width:0%"></div>
+        </div>
+      </div>
+
+      <div class="kpi-card">
+        <div class="kpi-label">Gas Flare Rate</div>
+        <div class="kpi-value small" id="kpiFlare">—</div>
+        <div class="kpi-badge" id="badgeFlare">vs 0% target</div>
+        <div class="progress-wrap">
+          <div class="progress-fill red" id="flareBar" style="width:0%"></div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Year Snapshot -->
+    <div class="section-label">Year Snapshot</div>
+    <div class="snapshot-card" id="snapshotCard">Loading data…</div>
+
+    <!-- Charts -->
+    <div class="section-label">Gas Charts</div>
+    <div class="section-block">
+
+      <div class="chart-card">
+        <div class="chart-title">Monthly AG &amp; NAG Production</div>
+        <div class="chart-wrap"><canvas id="chartMonthly"></canvas></div>
+      </div>
+
+      <div class="chart-card">
+        <div class="chart-title">Gas Utilization Breakdown</div>
+        <div class="chart-wrap"><canvas id="chartUtil"></canvas></div>
+      </div>
+
+      <div class="chart-card">
+        <div class="chart-title">Annual Flare Rate Trend</div>
+        <div class="chart-wrap"><canvas id="chartFlare"></canvas></div>
+      </div>
+
+    </div>
+
+  </main>
+
+  <!-- Footer -->
+  <footer class="site-footer">
+    <span class="footer-text">© NUPRC · Dashboard by Valentine Effiom · Data subject to quarterly reconciliation</span>
+    <span class="footer-badge">2026* Jan–Apr Provisional</span>
+  </footer>
+
+  <!-- Bottom Nav -->
+  <nav class="bottom-nav">
+    <a href="index.html" class="nav-item">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+      Home
+    </a>
+    <a href="overview.html" class="nav-item">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9,22 9,12 15,12 15,22"/></svg>
+      Overview
+    </a>
+    <a href="crude.html" class="nav-item">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2C12 2 5 10 5 15a7 7 0 0014 0C19 10 12 2 12 2z"/></svg>
+      Oil
+    </a>
+    <a href="gas.html" class="nav-item active">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8.5 14.5A2.5 2.5 0 0011 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 01-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 002.5 3z"/></svg>
+      Gas
+    </a>
+    <a href="terminals.html" class="nav-item">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="5" r="3"/><line x1="12" y1="8" x2="12" y2="22"/><path d="M5 15H2a10 10 0 0020 0h-3"/></svg>
+      Terminals
+    </a>
+    <a href="analysis.html" class="nav-item">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+      Analysis
+    </a>
+    <a href="glossary.html" class="nav-item">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 016.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/></svg>
+      Glossary
+    </a>
+  </nav>
+
+</div><!-- .wrapper -->
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script src="data.js"></script>
+<script src="charts.js"></script>
+<script>
+  var chartMonthly, chartUtil, chartFlare;
+
+  var SNAPSHOTS = {
+    'all': 'Nigeria commercialized 91.9% of gas produced from 2021–2026, flaring 7.8% of total output.',
+    2021:  '2021 had the highest flare rate on record at 9.2% — 252,579 MMscf burned.',
+    2022:  'Flare rate dropped sharply to 7.5% in 2022 — the single largest annual improvement in the dataset.',
+    2023:  '2023 commercialization rate of 92.4% was the highest recorded up to that point.',
+    2024:  '2024 flare rate of 7.7% remains 7.7 percentage points above the 2030 ZEFLOC target.',
+    2025:  'Gas commercialization reached 92.4% in 2025 with flaring at 7.5%.',
+    2026:  '2026 Jan–Apr provisional data shows a flare rate of 6.7% — the lowest on record.'
+  };
+
+  document.addEventListener('nuprcDataReady', function() {
+    var sel = document.getElementById('yearFilter');
+    GAS_YEARS.forEach(function(y) {
+      var opt = document.createElement('option');
+      opt.value = y;
+      opt.textContent = y;
+      sel.appendChild(opt);
+    });
+    sel.addEventListener('change', function() { update(sel.value); });
+    update('all');
+  });
+
+  function update(yearVal) {
+    var year = yearVal === 'all' ? null : parseInt(yearVal);
+    var rows = getGasData(year);
+
+    var produced  = sumField(rows, 'produced');
+    var utilized  = sumField(rows, 'utilized');
+    var flared    = sumField(rows, 'flared');
+    var commRate  = produced > 0 ? (utilized / produced * 100) : 0;
+    var flareRate = produced > 0 ? (flared   / produced * 100) : 0;
+
+    document.getElementById('kpiProduced').textContent = fmtTn(produced);
+    document.getElementById('kpiUtilized').textContent = fmtTn(utilized);
+    document.getElementById('kpiComm').textContent     = fmtPct(commRate);
+    document.getElementById('kpiFlare').textContent    = fmtPct(flareRate);
+
+    // Progress bars
+    document.getElementById('commBar').style.width  = Math.min(commRate,  100) + '%';
+    document.getElementById('flareBar').style.width = Math.min(flareRate, 100) + '%';
+
+    // Badges
+    var bText = year ? 'Selected year' : '2021–2026';
+    document.getElementById('badgeProduced').textContent = bText;
+    document.getElementById('badgeUtilized').textContent = bText;
+
+    // Snapshot
+    document.getElementById('snapshotCard').textContent = SNAPSHOTS[year || 'all'];
+
+    drawMonthly(year);
+    drawUtil(year);
+    drawFlareTrend();
+  }
+
+  function drawMonthly(year) {
+    var agData  = MONTH_ORDER.map(function(m){
+      return sumField(getGasData(year).filter(function(r){return r.month===m;}), 'ag');
+    });
+    var nagData = MONTH_ORDER.map(function(m){
+      return sumField(getGasData(year).filter(function(r){return r.month===m;}), 'nag');
+    });
+    var labels = MONTH_ORDER.map(function(m){ return m.slice(0,3); });
+
+    if (chartMonthly) chartMonthly.destroy();
+    chartMonthly = ChartHelpers.bar(
+      document.getElementById('chartMonthly').getContext('2d'),
+      labels,
+      [
+        { label:'AG',  data:agData,  backgroundColor: C.gas   },
+        { label:'NAG', data:nagData, backgroundColor: C.crude }
+      ],
+      {
+        x: { ticks:{font:{family:FONT,size:9},color:'#8A9A88',maxRotation:0}, grid:{color:'rgba(224,230,223,0.5)'} },
+        y: {
+          ticks:{font:{family:FONT,size:9},color:'#8A9A88', callback:function(v){return (v/1000).toFixed(0)+'K';}},
+          grid:{color:'rgba(224,230,223,0.5)'}
+        }
+      }
+    );
+  }
+
+  function drawUtil(year) {
+    var rows = getGasData(year);
+    var fieldUse = sumField(rows,'fieldUse');
+    var domestic = sumField(rows,'domestic');
+    var exported = sumField(rows,'export');
+    var flared   = sumField(rows,'flared');
+
+    if (chartUtil) chartUtil.destroy();
+    chartUtil = ChartHelpers.doughnut(
+      document.getElementById('chartUtil').getContext('2d'),
+      ['Field Use','Domestic Sales','Export Sales','Flared'],
+      [fieldUse, domestic, exported, flared],
+      [C.crude, C.gas, C.gold, C.red]
+    );
+  }
+
+  function drawFlareTrend() {
+    var flareRates = GAS_YEARS.map(function(y){
+      var rows = getGasData(y);
+      var prod = sumField(rows,'produced');
+      return prod > 0 ? sumField(rows,'flared') / prod * 100 : null;
+    });
+
+    if (chartFlare) chartFlare.destroy();
+    chartFlare = ChartHelpers.line(
+      document.getElementById('chartFlare').getContext('2d'),
+      GAS_YEARS.map(String),
+      [
+        {
+          label: 'Flare Rate %',
+          data: flareRates,
+          borderColor: C.red,
+          backgroundColor: 'rgba(192,57,43,0.07)',
+          fill: true,
+          tension: 0.35,
+          pointRadius: 5,
+          pointBackgroundColor: C.red,
+          borderWidth: 2
+        },
+        {
+          label: '2030 ZEFLOC Target',
+          data: GAS_YEARS.map(function(){ return 0; }),
+          borderColor: C.crude,
+          borderDash: [6,4],
+          borderWidth: 1.5,
+          pointRadius: 0,
+          fill: false
+        }
+      ],
+      {
+        x: { ticks:{font:{family:FONT,size:10},color:'#8A9A88'}, grid:{color:'rgba(224,230,223,0.5)'} },
+        y: {
+          min: 0,
+          ticks:{font:{family:FONT,size:10},color:'#8A9A88', callback:function(v){return v.toFixed(1)+'%';}},
+          grid:{color:'rgba(224,230,223,0.5)'}
+        }
+      }
+    );
+  }
+</script>
+</body>
+</html>

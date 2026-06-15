@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+  <title>NUPRC Dashboard — Crude Oil &amp; Condensate</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body class="page-crude">
+<div class="wrapper">
+
+  <!-- Header -->
+  <header class="site-header">
+    <div class="header-logo">
+      <img src="NUPRC logo.webp" class="header-logo-img" style="height:38px;width:38px;object-fit:contain;border-radius:50%;">
+    </div>
+    <div class="header-text">
+      <div class="header-title">Nigerian Upstream Petroleum Regulatory Commission</div>
+      <div class="header-subtitle">National Oil &amp; Gas Production Intelligence Dashboard · 2020–2026</div>
+    </div>
+    <div class="header-badge">
+      <span class="badge-dot">●</span> NUPRC Official Data
+    </div>
+  </header>
+
+  <!-- Year Filter -->
+  <div class="filter-bar">
+    <span class="filter-label">Year</span>
+    <select id="yearFilter" class="year-select">
+      <option value="all">All Years</option>
+    </select>
+  </div>
+
+  <main class="page-content">
+
+    <!-- KPI Cards (6, 2×3 grid) -->
+    <div class="section-label">Production Snapshot</div>
+    <div class="kpi-grid" style="grid-template-columns:1fr 1fr; gap:10px;">
+
+      <div class="kpi-card">
+        <div class="kpi-label">Total Crude Oil</div>
+        <div class="kpi-value small" id="kpiCrude">—</div>
+        <div class="kpi-badge" id="badgeCrude">2020–2026</div>
+      </div>
+
+      <div class="kpi-card">
+        <div class="kpi-label">Total Condensate</div>
+        <div class="kpi-value small" id="kpiCond">—</div>
+        <div class="kpi-badge" id="badgeCond">2020–2026</div>
+      </div>
+
+      <div class="kpi-card">
+        <div class="kpi-label">Daily Avg Production</div>
+        <div class="kpi-value small" id="kpiDaily">—</div>
+        <div class="kpi-badge" id="badgeDaily">bopd</div>
+      </div>
+
+      <div class="kpi-card">
+        <div class="kpi-label">YoY Change</div>
+        <div class="kpi-value small" id="kpiYoY">—</div>
+        <div class="kpi-badge" id="badgeYoY">vs prior year</div>
+      </div>
+
+      <div class="kpi-card">
+        <div class="kpi-label">Peak Month</div>
+        <div class="kpi-value small" id="kpiPeak">—</div>
+        <div class="kpi-badge" id="badgePeak">highest volume</div>
+      </div>
+
+      <div class="kpi-card">
+        <div class="kpi-label">Active Terminals</div>
+        <div class="kpi-value" id="kpiTerms">—</div>
+        <div class="kpi-badge" id="badgeTerms">with volume &gt; 0</div>
+      </div>
+
+    </div>
+
+    <!-- Dynamic Year Snapshot -->
+    <div class="section-label">Year Snapshot</div>
+    <div class="snapshot-card" id="snapshotCard">Loading data…</div>
+
+    <!-- Charts -->
+    <div class="section-label">Production Charts</div>
+    <div class="section-block">
+
+      <div class="chart-card">
+        <div class="chart-title">Monthly Crude Oil &amp; Condensate Production</div>
+        <div class="chart-wrap"><canvas id="chartMonthly"></canvas></div>
+      </div>
+
+      <div class="chart-card">
+        <div class="chart-title">All Years Production Comparison</div>
+        <div class="chart-wrap"><canvas id="chartAnnual"></canvas></div>
+      </div>
+
+    </div>
+
+  </main>
+
+  <!-- Footer -->
+  <footer class="site-footer">
+    <span class="footer-text">© NUPRC · Dashboard by Valentine Effiom · Data subject to quarterly reconciliation</span>
+    <span class="footer-badge">2026* Jan–Apr Provisional</span>
+  </footer>
+
+  <!-- Bottom Nav -->
+  <nav class="bottom-nav">
+    <a href="index.html" class="nav-item">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+      Home
+    </a>
+    <a href="overview.html" class="nav-item">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9,22 9,12 15,12 15,22"/></svg>
+      Overview
+    </a>
+    <a href="crude.html" class="nav-item active">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2C12 2 5 10 5 15a7 7 0 0014 0C19 10 12 2 12 2z"/></svg>
+      Oil
+    </a>
+    <a href="gas.html" class="nav-item">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8.5 14.5A2.5 2.5 0 0011 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 01-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 002.5 3z"/></svg>
+      Gas
+    </a>
+    <a href="terminals.html" class="nav-item">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="5" r="3"/><line x1="12" y1="8" x2="12" y2="22"/><path d="M5 15H2a10 10 0 0020 0h-3"/></svg>
+      Terminals
+    </a>
+    <a href="analysis.html" class="nav-item">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+      Analysis
+    </a>
+    <a href="glossary.html" class="nav-item">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 016.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/></svg>
+      Glossary
+    </a>
+  </nav>
+
+</div><!-- .wrapper -->
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script src="data.js"></script>
+<script src="charts.js"></script>
+<script>
+  var chartMonthly, chartAnnual;
+
+  var SNAPSHOTS = {
+    'all': 'Nigeria produced a cumulative 3.61bn bbls of oil and condensate from 2020 to 2026.',
+    2020:  "2020 was Nigeria’s best production year on record — 671M bbls of oil and condensate.",
+    2021:  '2021 output fell 11.9% to 591M bbls as pipeline disruptions intensified.',
+    2022:  '2022 was the worst year on record — 503M bbls, down 14.9% from 2021.',
+    2023:  '2023 marked a recovery — output rose 6.7% to 537M bbls after two consecutive years of decline.',
+    2024:  '2024 continued recovery with 570M bbls, still 15% below the 2020 peak.',
+    2025:  '2025 output of 552M bbls represents a 17.7% decline from the 2020 baseline.',
+    2026:  '2026 Jan–Apr provisional data shows 190M bbls — on pace with prior years.'
+  };
+
+  var DAYS_PER_MONTH = {
+    'JANUARY':31,'FEBRUARY':28,'MARCH':31,'APRIL':30,
+    'MAY':31,'JUNE':30,'JULY':31,'AUGUST':31,
+    'SEPTEMBER':30,'OCTOBER':31,'NOVEMBER':30,'DECEMBER':31
+  };
+
+  function calcDailyAvg(year) {
+    var rows = getOilData(year, null, null);
+    var totalVol = sumField(rows, 'volume_bbls');
+
+    function getDaysForYear(y) {
+      var activeMonths = Array.from(new Set(
+        getOilData(y, null, null)
+          .filter(function(r) { return r.volume_bbls > 0; })
+          .map(function(r) { return r.month; })
+      ));
+      if (activeMonths.length === 12) return (y === 2020 || y === 2024 ? 366 : 365);
+      return activeMonths.reduce(function(acc, m) {
+        var d = DAYS_PER_MONTH[m] || 30;
+        if (m === 'FEBRUARY' && (y === 2020 || y === 2024)) d = 29;
+        return acc + d;
+      }, 0);
+    }
+
+    if (!year) {
+      var totalDays = OIL_YEARS.reduce(function(acc, y) {
+        return acc + getDaysForYear(y);
+      }, 0);
+      return totalDays > 0 ? totalVol / totalDays : 0;
+    }
+
+    var days = getDaysForYear(year);
+    return days > 0 ? totalVol / days : 0;
+  }
+
+  document.addEventListener('nuprcDataReady', function() {
+    var sel = document.getElementById('yearFilter');
+    OIL_YEARS.forEach(function(y) {
+      var opt = document.createElement('option');
+      opt.value = y;
+      opt.textContent = y;
+      sel.appendChild(opt);
+    });
+    sel.addEventListener('change', function() { update(sel.value); });
+    update('all');
+  });
+
+  function update(yearVal) {
+    var year = yearVal === 'all' ? null : parseInt(yearVal);
+    var rows = getOilData(year, null, null);
+
+    // KPI 1: Total Crude + Condensate combined
+    var crude = sumField(rows.filter(function(r){return r.liquid_type==='Crude Oil';}), 'volume_bbls');
+    var cond  = sumField(rows.filter(function(r){return r.liquid_type==='Condensate';}), 'volume_bbls');
+    document.getElementById('kpiCrude').textContent = fmtComma(crude + cond);
+
+    // KPI 2: Total Condensate
+    document.getElementById('kpiCond').textContent = fmtComma(cond);
+
+    // KPI 3: Daily Avg
+    var daily = calcDailyAvg(year);
+    document.getElementById('kpiDaily').textContent = fmtBopd(daily);
+
+    // KPI 4: YoY Change
+    var yoyEl = document.getElementById('kpiYoY');
+    var badgeYoY = document.getElementById('badgeYoY');
+    if (year === null) {
+      // All years: compare 2020 to 2025
+      var v2020 = sumField(getOilData(2020,null,null),'volume_bbls');
+      var v2025 = sumField(getOilData(2025,null,null),'volume_bbls');
+      var pct = v2020 > 0 ? ((v2025 - v2020) / v2020 * 100) : 0;
+      yoyEl.textContent = (pct >= 0 ? '+' : '') + pct.toFixed(1) + '%';
+      yoyEl.className = 'kpi-value small ' + (pct >= 0 ? 'pos' : 'neg');
+      badgeYoY.textContent = '2020 → 2025';
+    } else if (year === 2020) {
+      yoyEl.textContent = 'Baseline';
+      yoyEl.className = 'kpi-value small';
+      badgeYoY.textContent = 'no prior year';
+    } else {
+      var vPrior = sumField(getOilData(year-1,null,null),'volume_bbls');
+      var vCurr  = sumField(getOilData(year,null,null),'volume_bbls');
+      var p = vPrior > 0 ? ((vCurr - vPrior) / vPrior * 100) : 0;
+      yoyEl.textContent = (p >= 0 ? '+' : '') + p.toFixed(1) + '%';
+      yoyEl.className = 'kpi-value small ' + (p >= 0 ? 'pos' : 'neg');
+      badgeYoY.textContent = 'vs ' + (year-1);
+    }
+
+    // KPI 5: Peak Month
+    var monthTotals = {};
+    rows.forEach(function(r){
+      var key = r.month + (year === null ? (' '+r.year) : '');
+      monthTotals[key] = (monthTotals[key]||0) + r.volume_bbls;
+    });
+    var peakKey = Object.keys(monthTotals).reduce(function(a,b){ return monthTotals[a]>monthTotals[b]?a:b; }, Object.keys(monthTotals)[0] || '');
+    document.getElementById('kpiPeak').textContent = peakKey
+      ? peakKey.charAt(0) + peakKey.slice(1).toLowerCase()
+      : '—';
+
+    // KPI 6: Active Terminals
+    var activeTerms = new Set(rows.filter(function(r){return r.volume_bbls>0;}).map(function(r){return r.terminal;}));
+    document.getElementById('kpiTerms').textContent = activeTerms.size;
+
+    // Badges
+    var badgeText = year ? 'Selected year' : '2020–2026';
+    document.getElementById('badgeCrude').textContent = badgeText;
+    document.getElementById('badgeCond').textContent  = badgeText;
+    document.getElementById('badgeDaily').textContent = 'bopd avg';
+
+    // Snapshot card
+    document.getElementById('snapshotCard').textContent = SNAPSHOTS[year || 'all'];
+
+    // Charts
+    drawMonthly(year);
+    drawAnnual();
+  }
+
+  function drawMonthly(year) {
+    var crudeByMonth = MONTH_ORDER.map(function(m){
+      return sumField(getOilData(year,'Crude Oil',null).filter(function(r){return r.month===m;}), 'volume_bbls');
+    });
+    var condByMonth = MONTH_ORDER.map(function(m){
+      return sumField(getOilData(year,'Condensate',null).filter(function(r){return r.month===m;}), 'volume_bbls');
+    });
+    var labels = MONTH_ORDER.map(function(m){ return m.slice(0,3); });
+
+    if (chartMonthly) chartMonthly.destroy();
+    chartMonthly = ChartHelpers.bar(
+      document.getElementById('chartMonthly').getContext('2d'),
+      labels,
+      [
+        { label:'Crude Oil',  data:crudeByMonth, backgroundColor: C.crude },
+        { label:'Condensate', data:condByMonth,  backgroundColor: C.gold  }
+      ],
+      {
+        x: { ticks:{font:{family:FONT,size:9},color:'#8A9A88',maxRotation:0}, grid:{color:'rgba(224,230,223,0.5)'} },
+        y: {
+          ticks:{font:{family:FONT,size:9},color:'#8A9A88', callback:function(v){return (v/1e6).toFixed(0)+'M';}},
+          grid:{color:'rgba(224,230,223,0.5)'}
+        }
+      }
+    );
+  }
+
+  function drawAnnual() {
+    var crudeArr = OIL_YEARS.map(function(y){ return sumField(getOilData(y,'Crude Oil',null),'volume_bbls'); });
+    var condArr  = OIL_YEARS.map(function(y){ return sumField(getOilData(y,'Condensate',null),'volume_bbls'); });
+
+    if (chartAnnual) chartAnnual.destroy();
+    chartAnnual = ChartHelpers.bar(
+      document.getElementById('chartAnnual').getContext('2d'),
+      OIL_YEARS.map(String),
+      [
+        { label:'Crude Oil',  data:crudeArr, backgroundColor: C.crude, stack:'s' },
+        { label:'Condensate', data:condArr,  backgroundColor: C.gold,  stack:'s' }
+      ],
+      {
+        x: { stacked:true, ticks:{font:{family:FONT,size:10},color:'#8A9A88'}, grid:{color:'rgba(224,230,223,0.5)'} },
+        y: {
+          stacked:true,
+          ticks:{font:{family:FONT,size:9},color:'#8A9A88', callback:function(v){return (v/1e6).toFixed(0)+'M';}},
+          grid:{color:'rgba(224,230,223,0.5)'}
+        }
+      }
+    );
+  }
+</script>
+</body>
+</html>

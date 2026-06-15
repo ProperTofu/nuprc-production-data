@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+  <title>NUPRC Dashboard — Terminals</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body class="page-terminals">
+<div class="wrapper">
+
+  <!-- Header -->
+  <header class="site-header">
+    <div class="header-logo">
+      <img src="NUPRC logo.webp" class="header-logo-img" style="height:38px;width:38px;object-fit:contain;border-radius:50%;">
+    </div>
+    <div class="header-text">
+      <div class="header-title">Nigerian Upstream Petroleum Regulatory Commission</div>
+      <div class="header-subtitle">National Oil &amp; Gas Production Intelligence Dashboard · 2020–2026</div>
+    </div>
+    <div class="header-badge">
+      <span class="badge-dot">●</span> NUPRC Official Data
+    </div>
+  </header>
+
+  <!-- Dual Filter Bar -->
+  <div class="filter-bar" style="gap:8px;">
+    <span class="filter-label">Terminal</span>
+    <select id="termFilter" class="year-select filter-terminal">
+      <option value="all">All Terminals</option>
+    </select>
+    <select id="yearFilter" class="year-select" style="flex:0.7">
+      <option value="all">All Years</option>
+    </select>
+  </div>
+
+  <main class="page-content">
+
+    <!-- KPI Cards -->
+    <div class="section-label">Terminal Performance</div>
+    <div class="kpi-grid">
+
+      <div class="kpi-card">
+        <div class="kpi-label">Terminal Total Volume</div>
+        <div class="kpi-value small" id="kpiVol">&#8212;</div>
+        <div class="kpi-badge" id="badgeVol">selected terminal</div>
+      </div>
+
+      <div class="kpi-card">
+        <div class="kpi-label">YoY Change</div>
+        <div class="kpi-value small" id="kpiYoY">&#8212;</div>
+        <div class="kpi-badge" id="badgeYoY">vs prior year</div>
+      </div>
+
+      <div class="kpi-card">
+        <div class="kpi-label">Terminal Share</div>
+        <div class="kpi-value small" id="kpiShare">&#8212;</div>
+        <div class="kpi-badge" id="badgeShare">of total output</div>
+      </div>
+
+      <div class="kpi-card">
+        <div class="kpi-label">Primary Product</div>
+        <div class="kpi-value small" id="kpiType" style="font-size:14px;">&#8212;</div>
+        <div class="kpi-badge">liquid type</div>
+      </div>
+
+    </div>
+
+    <!-- Year Snapshot -->
+    <div class="section-label">Snapshot</div>
+    <div class="snapshot-card" id="snapshotCard">Select a terminal to see its snapshot.</div>
+
+    <!-- Cross-year Performance Table -->
+    <div class="section-label">Cross-Year Performance (All Terminals)</div>
+    <p class="table-note">All figures in millions of barrels (M bbls). Green = increase vs prior year · Red = decline · — = no recorded liftings.</p>
+    <div class="table-wrap">
+      <table class="term-table" id="termTable">
+        <thead>
+          <tr id="termTableHead">
+            <th>Terminal</th>
+          </tr>
+        </thead>
+        <tbody id="termTableBody"></tbody>
+      </table>
+    </div>
+
+  </main>
+
+  <!-- Footer -->
+  <footer class="site-footer">
+    <span class="footer-text">© NUPRC · Dashboard by Valentine Effiom · Data subject to quarterly reconciliation</span>
+    <span class="footer-badge">2026* Jan–Apr Provisional</span>
+  </footer>
+
+  <!-- Bottom Nav -->
+  <nav class="bottom-nav">
+    <a href="index.html" class="nav-item">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+      Home
+    </a>
+    <a href="overview.html" class="nav-item">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9,22 9,12 15,12 15,22"/></svg>
+      Overview
+    </a>
+    <a href="crude.html" class="nav-item">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2C12 2 5 10 5 15a7 7 0 0014 0C19 10 12 2 12 2z"/></svg>
+      Oil
+    </a>
+    <a href="gas.html" class="nav-item">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8.5 14.5A2.5 2.5 0 0011 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 01-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 002.5 3z"/></svg>
+      Gas
+    </a>
+    <a href="terminals.html" class="nav-item active">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="5" r="3"/><line x1="12" y1="8" x2="12" y2="22"/><path d="M5 15H2a10 10 0 0020 0h-3"/></svg>
+      Terminals
+    </a>
+    <a href="analysis.html" class="nav-item">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+      Analysis
+    </a>
+    <a href="glossary.html" class="nav-item">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 016.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/></svg>
+      Glossary
+    </a>
+  </nav>
+
+</div><!-- .wrapper -->
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script src="data.js"></script>
+<script src="charts.js"></script>
+<script>
+  function populateTerminalDropdown() {
+    var sel = document.getElementById('termFilter');
+    while (sel.options.length > 1) sel.remove(1);
+    getTerminals().forEach(function(t) {
+      var opt = document.createElement('option');
+      opt.value = t;
+      opt.textContent = t;
+      sel.appendChild(opt);
+    });
+  }
+
+  function initTerminals() {
+    var yearSel = document.getElementById('yearFilter');
+    while (yearSel.options.length > 1) yearSel.remove(1);
+    OIL_YEARS.forEach(function(y) {
+      var opt = document.createElement('option');
+      opt.value = y;
+      opt.textContent = y;
+      yearSel.appendChild(opt);
+    });
+
+    populateTerminalDropdown();
+    buildTable();
+
+    var termSel = document.getElementById('termFilter');
+    termSel.addEventListener('change', function() {
+      updateKPIs(termSel.value, yearSel.value);
+    });
+    yearSel.addEventListener('change', function() {
+      updateKPIs(termSel.value, yearSel.value);
+    });
+
+    updateKPIs(termSel.value, yearSel.value);
+  }
+
+  function getVolForTermYear(terminal, year) {
+    return sumField(getOilData(year, null, terminal), 'volume_bbls');
+  }
+
+  function updateKPIs(termVal, yearVal) {
+    termVal = termVal !== undefined ? termVal : document.getElementById('termFilter').value;
+    yearVal = yearVal !== undefined ? yearVal : document.getElementById('yearFilter').value;
+    var terminal = termVal === 'all' ? null : termVal;
+    var year     = yearVal === 'all' ? null : parseInt(yearVal);
+
+    var rows = getOilData(year, null, terminal);
+    var vol  = sumField(rows, 'volume_bbls');
+    document.getElementById('kpiVol').textContent   = fmtComma(vol);
+    document.getElementById('badgeVol').textContent = terminal || 'All terminals';
+
+    var yoyEl    = document.getElementById('kpiYoY');
+    var yoyBadge = document.getElementById('badgeYoY');
+    if (!year) {
+      yoyEl.textContent    = '—';
+      yoyEl.className      = 'kpi-value small';
+      yoyBadge.textContent = 'Select a year';
+    } else if (year === 2020) {
+      yoyEl.textContent    = 'Baseline';
+      yoyEl.className      = 'kpi-value small';
+      yoyBadge.textContent = 'no prior year';
+    } else {
+      var vPrior = sumField(getOilData(year - 1, null, terminal), 'volume_bbls');
+      var vCurr  = sumField(getOilData(year,     null, terminal), 'volume_bbls');
+      if (vPrior === 0) {
+        yoyEl.textContent    = 'New';
+        yoyEl.className      = 'kpi-value small';
+        yoyBadge.textContent = 'first year of data';
+      } else {
+        var pct = (vCurr - vPrior) / vPrior * 100;
+        yoyEl.textContent    = (pct >= 0 ? '+' : '') + pct.toFixed(1) + '%';
+        yoyEl.className      = 'kpi-value small ' + (pct >= 0 ? 'pos' : 'neg');
+        yoyBadge.textContent = 'vs ' + (year - 1);
+      }
+    }
+
+    var totalAll = sumField(getOilData(year, null, null), 'volume_bbls');
+    var share    = totalAll > 0 ? (vol / totalAll * 100) : 0;
+    document.getElementById('kpiShare').textContent  = fmtPct(share);
+    document.getElementById('badgeShare').textContent = year ? 'of ' + year + ' total' : 'of all years';
+
+    var typeEl = document.getElementById('kpiType');
+    if (!terminal) {
+      typeEl.textContent = 'Multiple Types';
+    } else {
+      var crudeVol = sumField(getOilData(year, 'Crude Oil',  terminal), 'volume_bbls');
+      var condVol  = sumField(getOilData(year, 'Condensate', terminal), 'volume_bbls');
+      if (crudeVol === 0 && condVol === 0) {
+        typeEl.textContent = '—';
+      } else if (condVol === 0) {
+        typeEl.textContent = 'Crude Oil';
+      } else if (crudeVol === 0) {
+        typeEl.textContent = 'Condensate';
+      } else {
+        typeEl.textContent = 'Multiple Types';
+      }
+    }
+
+    updateSnapshot(terminal, year, vol, share);
+  }
+
+  function updateSnapshot(terminal, year, vol, share) {
+    var card = document.getElementById('snapshotCard');
+    if (!terminal) {
+      card.textContent = 'Nigeria produced oil and condensate across ' +
+        getTerminals().length + ' reporting terminals from 2020 to 2026. ' +
+        'Select a terminal to see its detailed snapshot.';
+      return;
+    }
+    if (!year) {
+      var totalVol   = sumField(getOilData(null, null, terminal), 'volume_bbls');
+      var grandTotal = sumField(getOilData(null, null, null),     'volume_bbls');
+      var cumShare   = grandTotal > 0 ? (totalVol / grandTotal * 100).toFixed(1) : '0.0';
+      card.textContent = terminal + ' produced a cumulative ' + fmtM(totalVol) +
+        'M bbls from 2020 to 2026 — ' + cumShare + '% of total national output.';
+      return;
+    }
+    var allVols = getTerminals().map(function(t) {
+      return { t: t, v: sumField(getOilData(year, null, t), 'volume_bbls') };
+    }).filter(function(x) {
+      return x.v > 0;
+    }).sort(function(a, b) {
+      return b.v - a.v;
+    });
+    var rank = 0;
+    for (var ri = 0; ri < allVols.length; ri++) {
+      if (allVols[ri].t === terminal) { rank = ri + 1; break; }
+    }
+    var suffix = rank === 1 ? 'st' : rank === 2 ? 'nd' : rank === 3 ? 'rd' : 'th';
+    card.textContent = terminal + ' was Nigeria\'s ' + rank + suffix +
+      ' terminal in ' + year + ' with ' + fmtM(vol) + 'M bbls — ' +
+      share.toFixed(1) + '% of total output.';
+  }
+
+  function buildTable() {
+    var headerRow = document.getElementById('termTableHead');
+    while (headerRow.cells.length > 1) headerRow.deleteCell(1);
+    OIL_YEARS.forEach(function(y, idx) {
+      var th = document.createElement('th');
+      th.textContent = idx === OIL_YEARS.length - 1 ? y + '*' : String(y);
+      headerRow.appendChild(th);
+    });
+
+    var terminals = getTerminals();
+    var tbody     = document.getElementById('termTableBody');
+    tbody.innerHTML = '';
+
+    var termVolumes = {};
+    terminals.forEach(function(t) {
+      termVolumes[t] = {};
+      OIL_YEARS.forEach(function(y) {
+        termVolumes[t][y] = sumField(getOilData(y, null, t), 'volume_bbls');
+      });
+    });
+
+    terminals.forEach(function(t) {
+      var tr     = document.createElement('tr');
+      var nameTd = document.createElement('td');
+      nameTd.textContent      = t;
+      nameTd.style.fontSize   = '11px';
+      nameTd.style.fontWeight = '600';
+      tr.appendChild(nameTd);
+
+      OIL_YEARS.forEach(function(y, idx) {
+        var td  = document.createElement('td');
+        var vol = termVolumes[t][y];
+        if (vol === 0) {
+          td.textContent = '—';
+          td.className   = 'cell-na';
+        } else {
+          td.textContent = fmtM(vol);
+          if (idx === 0) {
+            td.className = 'cell-base';
+          } else {
+            var prevYear = OIL_YEARS[idx - 1];
+            var prevVol  = termVolumes[t][prevYear];
+            if (prevVol === 0) {
+              td.className = 'cell-base';
+            } else if (vol > prevVol) {
+              td.className = 'cell-pos';
+            } else if (vol < prevVol) {
+              td.className = 'cell-neg';
+            } else {
+              td.className = 'cell-base';
+            }
+          }
+        }
+        tr.appendChild(td);
+      });
+
+      tbody.appendChild(tr);
+    });
+  }
+
+  if (window._nuprcReady) {
+    initTerminals();
+  } else {
+    document.addEventListener('nuprcDataReady', initTerminals);
+  }
+</script>
+</body>
+</html>

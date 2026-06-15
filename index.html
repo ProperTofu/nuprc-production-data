@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+  <title>NUPRC · Nigeria Oil &amp; Gas Intelligence Dashboard</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; }
+
+    body {
+      min-height: 100vh;
+      background: #003D22;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      font-family: 'Segoe UI', 'Calibri', Arial, sans-serif;
+      padding: 60px 24px;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    .landing {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      width: 100%;
+      max-width: 640px;
+    }
+
+    /* Logo */
+    .logo-wrap { margin-bottom: 24px; }
+    .logo-wrap img {
+      width: 110px;
+      height: 110px;
+      object-fit: contain;
+      border-radius: 50%;
+      border: 2px solid rgba(255,255,255,0.25);
+      box-shadow: 0 0 0 6px rgba(255,255,255,0.06), 0 8px 28px rgba(0,0,0,0.4);
+      display: block;
+    }
+
+    /* Commission name */
+    .commission-name {
+      color: #C8920A;
+      font-size: 16px;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      line-height: 1.45;
+      max-width: 320px;
+      margin-bottom: 16px;
+    }
+
+    /* Gold divider */
+    .divider {
+      width: 60px;
+      height: 1px;
+      background: #C8920A;
+      opacity: 0.65;
+      margin-bottom: 14px;
+    }
+
+    /* Subtitle */
+    .subtitle {
+      color: rgba(255,255,255,0.85);
+      font-size: 13px;
+      letter-spacing: 0.03em;
+      margin-bottom: 14px;
+    }
+
+    /* Year badge */
+    .year-badge {
+      display: inline-block;
+      background: rgba(255,255,255,0.1);
+      color: rgba(255,255,255,0.8);
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.05em;
+      padding: 4px 14px;
+      border-radius: 20px;
+      border: 1px solid rgba(255,255,255,0.15);
+      margin-bottom: 28px;
+    }
+
+    /* Executive summary */
+    .summary {
+      color: #B0BEC5;
+      font-size: 13px;
+      line-height: 1.7;
+      max-width: 580px;
+      padding: 0 20px;
+      margin-bottom: 36px;
+    }
+
+    /* Enter button */
+    .enter-btn {
+      display: block;
+      background: #C8920A;
+      color: #003D22;
+      font-family: inherit;
+      font-size: 14px;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      padding: 12px 32px;
+      border-radius: 6px;
+      border: none;
+      text-decoration: none;
+      max-width: 280px;
+      width: 100%;
+      text-align: center;
+      cursor: pointer;
+      transition: background 0.15s;
+      margin-bottom: 48px;
+    }
+    .enter-btn:hover  { background: #b07d08; }
+    .enter-btn:active { background: #9a6d06; }
+
+    /* Footer */
+    .footer {
+      color: rgba(255,255,255,0.5);
+      font-size: 10px;
+      letter-spacing: 0.03em;
+      line-height: 1.6;
+    }
+
+    /* Mobile */
+    @media (max-width: 480px) {
+      body     { padding: 40px 20px; overflow-x: hidden; }
+      .landing { overflow-x: hidden; }
+      .logo-wrap img { width: 90px; height: 90px; }
+      .commission-name { font-size: 14px; }
+      .summary  { font-size: 12px; padding: 0 16px; }
+      .enter-btn { width: 100%; max-width: 280px; }
+    }
+  </style>
+</head>
+<body>
+<div class="landing">
+
+  <div class="logo-wrap">
+    <img src="NUPRC logo.webp" alt="NUPRC Logo">
+  </div>
+
+  <div class="commission-name">Nigerian Upstream Petroleum Regulatory Commission</div>
+
+  <div class="divider"></div>
+
+  <div class="subtitle">National Oil &amp; Gas Production Intelligence Dashboard</div>
+
+  <div class="year-badge">2020–2026 &middot; Oil &amp; Gas Production</div>
+
+  <p class="summary">
+    Nigeria's upstream petroleum sector produced a cumulative 3.61 billion barrels of oil
+    and condensate between January 2020 and April 2026, with 13.91 trillion MMscf of gas
+    recorded from 2021 onwards. Output peaked in 2020 at 671 million barrels and declined
+    17.7% by 2025. Gas commercialization improved from 90.3% to 92.7% while the flare rate
+    fell from 9.2% to 6.7%. All data sourced from official NUPRC Monthly Production Reports.
+  </p>
+
+  <a href="overview.html" class="enter-btn">Enter Dashboard &rarr;</a>
+
+  <div class="footer">
+    &copy; 2026 Valentine Effiom &middot; Independent analytical tool &middot; Not an official NUPRC publication
+  </div>
+
+</div>
+</body>
+</html>
