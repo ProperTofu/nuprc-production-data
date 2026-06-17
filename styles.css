@@ -598,14 +598,113 @@ button { font-family: var(--font); cursor: pointer; border: none; background: no
 .mt-14 { margin-top: 14px; }
 .visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0,0,0,0); }
 
-/* ── Responsive: larger screens ──────────────────────────────────── */
-@media (min-width: 421px) {
-  .wrapper { border-radius: 12px; margin: 24px auto; min-height: auto; }
+/* ── Responsive ────────────────────────────────────────────────────── */
+
+/* Very small phones */
+@media (max-width: 360px) {
+  .kpi-value        { font-size: 18px; }
+  .kpi-value.small  { font-size: 14px; }
+  .gloss-grid       { grid-template-columns: 1fr; }
+  .nav-item         { font-size: 7.5px; padding: 4px 1px; }
+}
+
+/* Between phone and tablet — just add card rounding */
+@media (min-width: 421px) and (max-width: 639px) {
+  .wrapper    { border-radius: 12px; margin: 20px auto; min-height: auto; }
   .bottom-nav { border-radius: 0 0 12px 12px; }
 }
-@media (max-width: 320px) {
-  .kpi-value { font-size: 18px; }
-  .gloss-grid { grid-template-columns: 1fr; }
+
+/* ── Tablet (640px+) ─────────────────────────────────────────────── */
+@media (min-width: 640px) {
+  .wrapper {
+    max-width: 700px;
+    border-radius: 12px;
+    margin: 20px auto;
+    min-height: auto;
+  }
+  .bottom-nav {
+    max-width: 700px;
+    border-radius: 0 0 12px 12px;
+  }
+
+  /* Charts two-per-row */
+  .section-block             { flex-direction: row; flex-wrap: wrap; }
+  .section-block .chart-card { flex: 1 1 calc(50% - 5px); min-width: 260px; }
+
+  /* Insight cards: 2-column grid instead of horizontal scroll */
+  .insights-scroll {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    overflow-x: visible;
+    padding-bottom: 0;
+  }
+  .insight-card { flex: none; }
+
+  .chart-wrap   { height: 240px; }
+  .header-title { font-size: 13px; }
+}
+
+/* ── Desktop (960px+) ────────────────────────────────────────────── */
+@media (min-width: 960px) {
+  :root { --header-h: 76px; }
+
+  .wrapper {
+    max-width: 1060px;
+    border-radius: 0;
+    margin: 0 auto;
+    min-height: 100vh;
+    box-shadow: 0 0 60px rgba(0,0,0,0.10);
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* Reorder: header → nav → filter-bar → content → footer */
+  .site-header  { order: 1; }
+  .bottom-nav   { order: 2; }
+  .filter-bar   { order: 3; top: calc(var(--header-h) + var(--nav-h)); }
+  .page-content { order: 4; flex: 1; }
+  .site-footer  { order: 5; margin-bottom: 0; }
+
+  /* Nav promoted to a sticky bar just below the header */
+  .bottom-nav {
+    position: sticky;
+    top: var(--header-h);
+    bottom: auto;
+    left: auto;
+    transform: none;
+    width: 100%;
+    max-width: 100%;
+    border-top: none;
+    border-bottom: 1px solid rgba(255,255,255,0.10);
+    border-radius: 0;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.12);
+  }
+
+  .page-content { padding: 20px 24px 28px; }
+
+  /* KPI: 4 columns by default; 3 columns for the 6-card crude page */
+  .kpi-grid             { grid-template-columns: repeat(4, 1fr); }
+  .page-crude .kpi-grid { grid-template-columns: repeat(3, 1fr); }
+
+  /* Insight cards: 3-column grid */
+  .insights-scroll { grid-template-columns: repeat(3, 1fr); }
+
+  /* Glossary: 4-column grid */
+  .gloss-grid { grid-template-columns: repeat(4, 1fr); }
+
+  .chart-wrap { height: 280px; }
+
+  .header-title    { font-size: 15px; }
+  .header-subtitle { font-size: 11.5px; }
+
+  .nav-item     { font-size: 10px; gap: 4px; }
+  .nav-item svg { width: 22px; height: 22px; }
+
+  .kpi-value       { font-size: 28px; }
+  .kpi-value.small { font-size: 20px; }
+
+  .section-label { font-size: 11px; margin: 24px 0 10px; }
+  .section-label:first-child { margin-top: 6px; }
 }
 
 /* ── Header Logo Image ───────────────────────────────────────────── */
