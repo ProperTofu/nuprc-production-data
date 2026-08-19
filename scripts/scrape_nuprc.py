@@ -16,10 +16,11 @@ stored as barrels per month, while the PDF publishes a daily rate in
 thousands, so each value is multiplied by 1000 and by the length of that
 month.
 
-Gas is NOT handled yet. gas_YYYY.csv has entirely different columns (AG/NAG,
-field use, domestic, export, utilised, flared) and comes from a separate
-report, and no sample of it was available when this was written. Adding it
-means a second parser, not a flag on this one.
+Both reports are handled, by two separate parsers behind --kind. They share
+only the watermark handling, the download and the CSV writer, because the
+reports have nothing else in common: crude is a terminal-by-terminal sheet
+across two pages in thousand barrels per day, gas is one row per month
+already in MMSCF.
 
 PyMuPDF is the only dependency and is not worth installing permanently for a
 script that runs once a month, so scripts/scrape_nuprc.sh runs this in a
@@ -27,7 +28,12 @@ throwaway container. Committing is left to that wrapper, which has git and a
 checkout; this script only writes the file.
 
 Usage:
-    python scripts/scrape_nuprc.py --url <pdf-url-or-path> --year 2026
+    python scripts/scrape_nuprc.py --url <pdf-or-path> --year 2026
+    python scripts/scrape_nuprc.py --url <pdf-or-path> --year 2026 --kind gas
+
+Always pass the NEWEST release. Both reports are cumulative, so an older one
+carries fewer months, and every run rewrites the whole year -- the guard for
+that refuses to publish a year shorter than the one already committed.
 """
 
 from __future__ import annotations
@@ -307,6 +313,159 @@ def write_csv(rows: list[dict], path: Path) -> str:
     return text
 
 
+# ---------------------------------------------------------------- gas ------
+#
+# A different report and a different shape: one row per month, no terminals,
+# already in the unit the CSV stores (MMSCF), so there is no rate-to-volume
+# conversion and nothing to sum per terminal. It shares this file for the
+# watermark handling, the fetch and the CSV writer, and nothing else.
+#
+# The published sheet carries three columns the CSV has never stored -- two
+# percentages and gas shrinkage -- and they are dropped rather than added,
+# both to keep the file's shape and because the percentages are unreliable:
+# in the same October 2025 report, "% UTILIZED" is 92.0% for January but
+# 0.93 for July, the same quantity written two ways. Utilisation is better
+# recomputed from the volumes than trusted from that column.
+_GAS_FIELDS = [
+    ("ag_production_mmscf", ("AG PRODUCTION",)),
+    ("nag_production_mmscf", ("NAG PRODUCTION",)),
+    ("total_gas_produced_mmscf", ("TOTAL GAS PRODUCTION",)),
+    ("field_use_mmscf", ("FIELD USE",)),
+    ("domestic_sales_mmscf", ("DOMESTIC SALES",)),
+    ("export_sales_mmscf", ("EXPORT SALES",)),
+    ("total_gas_utilized_mmscf", ("TOTAL GAS UTILISED", "TOTAL GAS UTILIZED")),
+    ("total_gas_flared_mmscf", ("TOTAL GAS FLARED",)),
+]
+GAS_COLUMNS = ["month"] + [name for name, _ in _GAS_FIELDS]
+
+# The report's own TOTAL line is rounded to whole MMSCF while the months
+# carry two decimals, so twelve months of rounding is the tolerance, not a
+# fixed fraction.
+_GAS_TOTAL_TOLERANCE = 12.0
+
+
+def _norm_header(text: str) -> str:
+    return re.sub(r"[^A-Z]", "", _clean(text).upper())
+
+
+def parse_gas_pdf(path: str | Path) -> tuple[list[dict], dict[str, float]]:
+    """Monthly gas rows, and the report's own TOTAL line to check them against.
+
+    Columns are located by their headings rather than by position, so an
+    inserted column does not silently shift every value one place left.
+    """
+    import fitz
+
+    rows: list[dict] = []
+    totals: dict[str, float] = {}
+    with fitz.open(str(path)) as doc:
+        for page in doc:
+            for table in page.find_tables().tables:
+                data = table.extract()
+                column: dict[str, int] = {}
+                for raw in data:
+                    cells = [_clean(c) for c in raw]
+                    if not column:
+                        heads = [_norm_header(c) for c in cells]
+                        for field, wanted in _GAS_FIELDS:
+                            for want in wanted:
+                                key = _norm_header(want)
+                                hit = next(
+                                    (i for i, h in enumerate(heads) if h.startswith(key)),
+                                    None,
+                                )
+                                if hit is not None:
+                                    column[field] = hit
+                                    break
+                        # Every field must be found, or the mapping is wrong
+                        # and the values would be filed under the wrong names.
+                        if len(column) != len(_GAS_FIELDS):
+                            column = {}
+                        continue
+
+                    label = cells[0].upper()
+                    values = {
+                        field: _number(raw[i]) for field, i in column.items()
+                    }
+                    if label == "TOTAL":
+                        totals = {f: v for f, v in values.items() if v is not None}
+                        continue
+                    if label not in MONTHS:
+                        continue
+                    # Months NUPRC has not published yet are blank or dashed
+                    # across the row, and #DIV/0! in the percentage columns.
+                    # They are skipped, not written as zero.
+                    if all(v is None for v in values.values()):
+                        continue
+                    rows.append({"month": label, **values})
+
+    if not rows:
+        raise ValueError(
+            f"no gas rows found in {path} -- is this the monthly gas publication?"
+        )
+    rows.sort(key=lambda r: _MONTH_INDEX[r["month"]])
+    return rows, totals
+
+
+def reconcile_gas(rows: list[dict], totals: dict[str, float]) -> None:
+    """Check each column against the TOTAL line printed in the report."""
+    if not totals:
+        logger.warning("no TOTAL row found; gas columns not reconciled")
+        return
+    for field, expected in totals.items():
+        got = sum(r[field] for r in rows if r.get(field) is not None)
+        if abs(got - expected) > _GAS_TOTAL_TOLERANCE:
+            raise SystemExit(
+                f"{field}: months sum to {got:,.2f} but the report's TOTAL is "
+                f"{expected:,.2f} MMSCF. Refusing to publish."
+            )
+    logger.info("all %d gas columns reconcile against the TOTAL row", len(totals))
+
+
+def write_gas_csv(rows: list[dict], path: Path) -> str:
+    buffer = io.StringIO()
+    writer = csv.DictWriter(buffer, fieldnames=GAS_COLUMNS, lineterminator="\n")
+    writer.writeheader()
+    for row in rows:
+        writer.writerow(
+            {k: ("" if row.get(k) is None else row.get(k)) for k in GAS_COLUMNS}
+        )
+    text = buffer.getvalue()
+    path.write_text(text, encoding="utf-8", newline="")
+    return text
+
+
+def check_not_shrinking(rows: list[dict], path: Path, allow: bool) -> None:
+    """Refuse to replace a published year with fewer months than it already has.
+
+    Every run rewrites the whole year, which is what lets a revision to a back
+    month land. The cost is that pointing the script at an OLDER release
+    quietly deletes the months that release predates -- running the October
+    2025 gas report over a finished 2025 would drop November and December,
+    reconcile perfectly against its own TOTAL line, and look like a clean run.
+
+    Nothing else can catch this: the file is internally consistent, just
+    short. So the check is against what is already published, not against the
+    PDF.
+    """
+    if not path.exists():
+        return
+    with path.open(newline="", encoding="utf-8") as handle:
+        existing = {r["month"] for r in csv.DictReader(handle) if r.get("month")}
+    missing = sorted(existing - {r["month"] for r in rows}, key=_MONTH_INDEX.get)
+    if not missing:
+        return
+    logger.warning("%s already has months this report does not: %s",
+                   path.name, ", ".join(missing))
+    if not allow:
+        raise SystemExit(
+            f"{path.name} would lose {len(missing)} month(s): {', '.join(missing)}.\n"
+            "This usually means an older report was passed. NUPRC's releases are "
+            "cumulative, so use the newest one. Pass --allow-fewer-months only if "
+            "you intend to publish a shorter year."
+        )
+
+
 def fetch(url: str) -> bytes:
     request = urllib.request.Request(url, headers={"User-Agent": _UA})
     with urllib.request.urlopen(request, timeout=60) as response:
@@ -329,6 +488,12 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--url", required=True, help="PDF URL, or a local path")
     parser.add_argument("--year", type=int, required=True)
+    parser.add_argument(
+        "--kind",
+        choices=("oil", "gas"),
+        default="oil",
+        help="which report this PDF is: crude and condensate, or monthly gas",
+    )
     # Defaults to the repo root, two levels up from scripts/, so the CSV
     # lands beside the ones already published rather than in the caller's cwd.
     parser.add_argument(
@@ -338,6 +503,11 @@ def main() -> int:
     )
     parser.add_argument(
         "--dry-run", action="store_true", help="report what would change, write nothing"
+    )
+    parser.add_argument(
+        "--allow-fewer-months",
+        action="store_true",
+        help="permit rewriting a year with fewer months than it already has",
     )
     parser.add_argument(
         "--allow-new-terminals",
@@ -357,35 +527,44 @@ def main() -> int:
         pdf_path = temporary
 
     try:
-        parsed, published = parse_pdf(pdf_path)
-        rows = to_rows(parsed, args.year)
+        if args.kind == "gas":
+            rows, gas_totals = parse_gas_pdf(pdf_path)
+        else:
+            parsed, published = parse_pdf(pdf_path)
+            rows = to_rows(parsed, args.year)
     finally:
         if temporary and temporary.exists():
             temporary.unlink()
 
-    # Both checks run before anything is written, so a bad parse cannot reach
-    # the data repo and from there the terminal.
-    check_terminals(rows, args.allow_new_terminals)
-    reconcile(rows, published, args.year)
+    # Checks run before anything is written, so a bad parse cannot reach the
+    # published CSVs, and from there every project that reads them.
+    if args.kind == "gas":
+        reconcile_gas(rows, gas_totals)
+        logger.info("%d monthly gas rows", len(rows))
+    else:
+        check_terminals(rows, args.allow_new_terminals)
+        reconcile(rows, published, args.year)
+        logger.info(
+            "%d rows, %d terminals", len(rows), len({r["terminal"] for r in rows})
+        )
 
     months = sorted({r["month"] for r in rows}, key=lambda m: _MONTH_INDEX[m])
-    logger.info(
-        "%d rows, %d terminals, months %s to %s",
-        len(rows),
-        len({r["terminal"] for r in rows}),
-        months[0],
-        months[-1],
-    )
+    logger.info("months %s to %s", months[0], months[-1])
 
-    filename = f"oil_{args.year}.csv"
+    filename = f"{args.kind}_{args.year}.csv"
     if args.dry_run:
         logger.info("dry run, nothing written")
-        print("".join(f"{r['month']},{r['terminal']},{r['liquid_type']},{r['volume_bbls']}\n"
-                      for r in rows[:5]), end="")
+        for row in rows[:5]:
+            print(",".join(str(v) for v in row.values()))
         return 0
 
-    text = write_csv(rows, Path(args.out) / filename)
-    logger.info("wrote %s", Path(args.out) / filename)
+    path = Path(args.out) / filename
+    check_not_shrinking(rows, path, args.allow_fewer_months)
+    if args.kind == "gas":
+        write_gas_csv(rows, path)
+    else:
+        write_csv(rows, path)
+    logger.info("wrote %s", path)
     return 0
 
 

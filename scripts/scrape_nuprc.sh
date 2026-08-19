@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
 # Rebuild a year's oil_YYYY.csv from NUPRC's published PDF and commit it.
 #
-#   ./scripts/scrape_nuprc.sh 2026 https://www.nuprc.gov.ng/reports/JAN_TO_JULY_BOPD_xxx.pdf
-#   ./scripts/scrape_nuprc.sh 2026 ~/JAN_TO_JULY_BOPD_xxx.pdf --dry-run
+#   ./scripts/scrape_nuprc.sh 2026 ~/JAN_TO_JULY_BOPD_xxx.pdf
+#   ./scripts/scrape_nuprc.sh 2026 ~/2026-Monthly-Gas-Data_June.pdf --kind gas
+#   ./scripts/scrape_nuprc.sh 2026 <pdf> --dry-run
 #
 # The report is cumulative: the July release carries January through July, so
 # the newest one supersedes every earlier month, revisions included. Always
@@ -14,7 +15,8 @@
 set -euo pipefail
 
 if [ $# -lt 2 ]; then
-    echo "usage: $0 <year> <pdf-url-or-path> [--dry-run] [--allow-new-terminals]" >&2
+    echo "usage: $0 <year> <pdf-url-or-path> [--kind gas] [--dry-run]" >&2
+    echo "                                     [--allow-new-terminals] [--allow-fewer-months]" >&2
     exit 1
 fi
 
@@ -43,12 +45,16 @@ if [[ " $* " == *" --dry-run "* ]]; then
 fi
 
 cd "$REPO"
-if git diff --quiet -- "oil_${YEAR}.csv"; then
-    echo "oil_${YEAR}.csv unchanged, nothing to commit"
+# Which CSV was rebuilt, so the right file is staged. The kind arrives as
+# "--kind gas" among the passthrough arguments.
+KIND="oil"
+[[ " $* " == *" gas "* ]] && KIND="gas"
+if git diff --quiet -- "${KIND}_${YEAR}.csv"; then
+    echo "${KIND}_${YEAR}.csv unchanged, nothing to commit"
     exit 0
 fi
 
-git add "oil_${YEAR}.csv"
-git commit -m "${YEAR}: rebuild crude and condensate from the NUPRC report"
+git add "${KIND}_${YEAR}.csv"
+git commit -m "${YEAR}: rebuild ${KIND} from the NUPRC report"
 echo
 echo "Committed. Review with 'git show', then: git push"
