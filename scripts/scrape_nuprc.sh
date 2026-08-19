@@ -32,8 +32,18 @@ if [ -f "$SOURCE" ]; then
     ARG="/input.pdf"
 fi
 
+# Mail settings are passed through, not required: if they are absent the
+# script says so and still fails loudly. Set ALERT_EMAIL to send somewhere
+# other than EMAIL_FROM. Easiest is to source the app's own env file, which
+# already holds all of these:
+#     set -a; . /home/ubuntu/nui-terminal/.env; set +a
+MAIL=()
+for var in SMTP_HOST SMTP_PORT SMTP_USER SMTP_PASS EMAIL_FROM ALERT_EMAIL; do
+    [ -n "${!var:-}" ] && MAIL+=(-e "$var=${!var}")
+done
+
 docker run --rm \
-    -v "$REPO:/work" -w /work "${MOUNT[@]}" \
+    -v "$REPO:/work" -w /work "${MOUNT[@]}" "${MAIL[@]}" \
     python:3.11-slim \
     bash -c "pip install --quiet pymupdf && python scripts/scrape_nuprc.py \
         --url \"$ARG\" --year \"$YEAR\" --out /work $*"

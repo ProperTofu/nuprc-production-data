@@ -42,7 +42,9 @@ import argparse
 import calendar
 import csv
 import io
+import json
 import logging
+import os
 import re
 import sys
 import urllib.request
@@ -222,11 +224,19 @@ def check_terminals(rows: list[dict], allow_new: bool) -> None:
     for name in unknown:
         logger.warning("terminal not seen before: %r", name)
     if not allow_new:
+        paste = ", ".join(f'"{n}"' for n in unknown)
         raise SystemExit(
-            f"{len(unknown)} unrecognised terminal name(s): {unknown}\n"
-            "Scrambled text extraction looks exactly like this. Open the PDF, "
-            "and if the stream really is new, add it to KNOWN_TERMINALS or "
-            "pass --allow-new-terminals."
+            f"{len(unknown)} unrecognised terminal name(s): {paste}\n"
+            "\nNOTHING WAS WRITTEN. No row was dropped: the whole run "
+            "stopped, so the published CSV is untouched.\n"
+            "\nOpen the PDF and look at the name. Scrambled extraction "
+            "produces nonsense like 'PUEGNON IONCGTON(JO S' and reads as a new "
+            "stream; a genuinely new field reads like a field.\n"
+            "\nIf it is real, add it to KNOWN_TERMINALS in this script:\n"
+            f"    {paste},\n"
+            "and commit that, so a new producing stream is recorded. To publish "
+            "once without editing, pass --allow-new-terminals; either way the "
+            "row IS written, never skipped."
         )
 
 
@@ -466,6 +476,95 @@ def check_not_shrinking(rows: list[dict], path: Path, allow: bool) -> None:
         )
 
 
+
+# NUPRC stamps a real creation date into every report, and they order
+# correctly: the July crude release is dated 12 Aug 2026, the revised Jan-May
+# 14 Jun. It is recorded per CSV after each successful run.
+SOURCES_FILE = ".nuprc_sources.json"
+
+_PDF_DATE_RE = re.compile(r"D:(\d{4})(\d{2})(\d{2})(\d{2})(\d{2})(\d{2})")
+
+
+def pdf_published_at(path: str | Path) -> str | None:
+    """The report's own creation date, as a sortable ISO string."""
+    import fitz
+
+    with fitz.open(str(path)) as doc:
+        raw = (doc.metadata or {}).get("creationDate") or ""
+    match = _PDF_DATE_RE.search(raw)
+    return "{}-{}-{}T{}:{}:{}".format(*match.groups()) if match else None
+
+
+def check_not_older(key: str, when: str | None, root: Path, allow: bool) -> dict:
+    """Refuse a report published before the one the current CSV was built from.
+
+    The shrink guard catches an older release carrying fewer months. It cannot
+    catch a re-run of an equally long but superseded one: the original Jan-May
+    and the REVISED Jan-May cover the same five months, so the row counts
+    match while the figures quietly roll back. Comparing the reports' own
+    publication dates is what separates those two.
+    """
+    store_path = root / SOURCES_FILE
+    store = json.loads(store_path.read_text(encoding="utf-8")) if store_path.exists() else {}
+    previous = store.get(key, {}).get("published")
+    if when is None:
+        logger.warning("this PDF carries no creation date; age not checked")
+        return store
+    if previous and when < previous:
+        if not allow:
+            raise SystemExit(
+                f"This report was published {when}, but {key}.csv was built "
+                f"from one published {previous}.\n"
+                "\nNOTHING WAS WRITTEN. Publishing an older report rolls back any "
+                "revision the newer one carried, even where the months line up.\n"
+                "\nUse the newest report, or pass --allow-older to revert on purpose."
+            )
+        logger.warning("publishing an older report (%s < %s)", when, previous)
+    return store
+
+
+def record_source(store: dict, key: str, when: str | None, source: str, root: Path) -> None:
+    store[key] = {"published": when, "source": Path(source).name}
+    (root / SOURCES_FILE).write_text(
+        json.dumps(store, indent=2, sort_keys=True) + "\n", encoding="utf-8"
+    )
+
+
+
+# A guard that stops the run is the moment you most need to hear about it:
+# the month is published, the data is not, and nothing else will say so. Uses
+# the same SMTP_* variables as the terminal's own mail, so there is nothing
+# new to configure; without them the script simply logs and carries on
+# failing loudly, which is still correct behaviour.
+def send_alert(subject: str, body: str) -> None:
+    host = os.environ.get("SMTP_HOST")
+    to = os.environ.get("ALERT_EMAIL") or os.environ.get("EMAIL_FROM")
+    if not host or not to:
+        logger.info("no SMTP_HOST/ALERT_EMAIL set, no alert sent")
+        return
+    try:
+        import smtplib
+        from email.message import EmailMessage
+
+        message = EmailMessage()
+        message["Subject"] = subject
+        message["From"] = os.environ.get("EMAIL_FROM", to)
+        message["To"] = to
+        message.set_content(body)
+
+        port = int(os.environ.get("SMTP_PORT", "587"))
+        with smtplib.SMTP(host, port, timeout=30) as smtp:
+            smtp.starttls()
+            user = os.environ.get("SMTP_USER")
+            if user:
+                smtp.login(user, os.environ.get("SMTP_PASS", ""))
+            smtp.send_message(message)
+        logger.info("alert sent to %s", to)
+    except Exception as exc:
+        # Never let a mail failure hide the problem that triggered it.
+        logger.warning("could not send alert: %s", exc)
+
+
 def fetch(url: str) -> bytes:
     request = urllib.request.Request(url, headers={"User-Agent": _UA})
     with urllib.request.urlopen(request, timeout=60) as response:
@@ -505,6 +604,11 @@ def main() -> int:
         "--dry-run", action="store_true", help="report what would change, write nothing"
     )
     parser.add_argument(
+        "--allow-older",
+        action="store_true",
+        help="permit a report published before the one the CSV was built from",
+    )
+    parser.add_argument(
         "--allow-fewer-months",
         action="store_true",
         help="permit rewriting a year with fewer months than it already has",
@@ -517,6 +621,7 @@ def main() -> int:
     args = parser.parse_args()
     logging.basicConfig(level=logging.INFO, format="%(levelname)s %(message)s")
 
+    pdf_source = args.url
     source = Path(args.url)
     if source.exists():
         pdf_path = source
@@ -526,6 +631,7 @@ def main() -> int:
         temporary.write_bytes(fetch(args.url))
         pdf_path = temporary
 
+    published_at = pdf_published_at(pdf_path)
     try:
         if args.kind == "gas":
             rows, gas_totals = parse_gas_pdf(pdf_path)
@@ -559,14 +665,45 @@ def main() -> int:
         return 0
 
     path = Path(args.out) / filename
+    key = f"{args.kind}_{args.year}"
+    # Both "is this going backwards" checks, before the write. One compares
+    # the months against the published file, the other compares the report's
+    # own publication date against the one that built it.
     check_not_shrinking(rows, path, args.allow_fewer_months)
+    store = check_not_older(key, published_at, Path(args.out), args.allow_older)
     if args.kind == "gas":
         write_gas_csv(rows, path)
     else:
         write_csv(rows, path)
-    logger.info("wrote %s", path)
+    record_source(store, key, published_at, str(pdf_source), Path(args.out))
+    logger.info("wrote %s (report published %s)", path, published_at or "date unknown")
     return 0
 
 
+def run() -> int:
+    """main(), with any refusal reported by mail before it exits.
+
+    Only guard refusals and genuine errors alert. A clean run stays silent:
+    an alert that arrives every month is one nobody reads.
+    """
+    try:
+        return main()
+    except SystemExit as exc:
+        if exc.code not in (0, None):
+            send_alert(
+                "NUPRC scraper stopped, needs a look",
+                f"{exc}\n\nNothing was written. The published CSVs are untouched.\n"
+                f"\nRun again once you have checked, or with the override the "
+                f"message names if the report really is correct.",
+            )
+        raise
+    except Exception as exc:
+        send_alert(
+            "NUPRC scraper failed",
+            f"{type(exc).__name__}: {exc}\n\nNothing was written.",
+        )
+        raise
+
+
 if __name__ == "__main__":
-    sys.exit(main())
+    sys.exit(run())
