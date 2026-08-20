@@ -35,10 +35,13 @@ fi
 # A local workbook is mounted so the container can see it. Its name is exactly
 # why arguments are never interpolated into a shell string below: Baker Hughes
 # ships "July-2026  WorldWide Rig Count Report.xlsx", double space included.
+# --push is ours, not the Python script's, so it is filtered out below.
+PUSH=""
 MOUNT=()
 ARGS=()
 expect_path=""
 for arg in "$@"; do
+    if [ "$arg" = "--push" ]; then PUSH=1; expect_path=""; continue; fi
     if [ -n "$expect_path" ] && [ -f "$arg" ]; then
         dir="$(cd "$(dirname "$arg")" && pwd)"
         target="/input_${#ARGS[@]}.xlsx"
@@ -86,5 +89,11 @@ fi
 
 git add "$CSV"
 git commit -m "Rig count: refresh Nigeria series from Baker Hughes"
-echo
-echo "Committed. Review with 'git show', then: git push"
+
+if [ -n "$PUSH" ]; then
+    git push
+    echo "Committed and pushed."
+else
+    echo
+    echo "Committed. Review with 'git show', then: git push"
+fi

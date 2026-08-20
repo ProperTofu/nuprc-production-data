@@ -20,15 +20,24 @@
 #     set -a; . /home/ubuntu/nui-terminal/.env; set +a
 set -euo pipefail
 
-if [ $# -lt 1 ]; then
-    echo "usage: $0 <year> [pdf-url-or-path] [--kind gas] [--dry-run]" >&2
-    echo "            [--allow-new-terminals] [--allow-fewer-months] [--allow-older]" >&2
+usage() {
+    echo "usage: $0 [year] [pdf-url-or-path] [--kind gas] [--push] [--dry-run]" >&2
+    echo "          [--allow-new-terminals] [--allow-fewer-months] [--allow-older]" >&2
     echo >&2
-    echo "  With no PDF, the newest is discovered from NUPRC's catalogue." >&2
+    echo "  With no year, the current one. With no PDF, the newest is" >&2
+    echo "  discovered from NUPRC's catalogue. --push is for unattended runs." >&2
     exit 1
-fi
+}
+[ "${1:-}" = "--help" ] && usage
 
-YEAR="$1"; shift
+# The year is optional, and only a bare four-digit argument is taken as one,
+# so an unattended crontab needs no calendar arithmetic -- a literal year
+# there silently stops working on 1 January.
+YEARARG=()
+YEAR="$(date +%Y)"
+if [[ "${1:-}" =~ ^[0-9]{4}$ ]]; then
+    YEAR="$1"; YEARARG=(--year "$YEAR"); shift
+fi
 # The PDF is optional. Anything starting with a dash is a flag, so only a
 # bare argument is taken as a file or URL -- which is what lets the
 # unattended form be just "<year> --kind gas".
@@ -65,6 +74,15 @@ if [ -n "$SOURCE" ]; then
     fi
 fi
 
+# --push is ours, not the Python script's, so it is filtered out before the
+# arguments are handed on.
+PUSH=""
+ARGS=()
+for arg in "$@"; do
+    if [ "$arg" = "--push" ]; then PUSH=1; else ARGS+=("$arg"); fi
+done
+set -- "${ARGS[@]+"${ARGS[@]}"}"
+
 MAIL=()
 for var in SMTP_HOST SMTP_PORT SMTP_USER SMTP_PASS EMAIL_FROM ALERT_EMAIL; do
     [ -n "${!var:-}" ] && MAIL+=(-e "$var=${!var}")
@@ -78,7 +96,7 @@ done
     -v "$REPO:/work" -w /work "${MOUNT[@]}" "${MAIL[@]}" \
     python:3.11-slim \
     bash -c 'pip install --quiet pymupdf && exec python scripts/scrape_nuprc.py "$@"' _ \
-        --year "$YEAR" --out /work "${URLARG[@]}" "$@"
+        "${YEARARG[@]}" --out /work "${URLARG[@]}" "$@"
 
 # --dry-run writes nothing, so there is nothing to commit and git would fail
 # the whole script on an empty commit.
@@ -115,5 +133,11 @@ fi
 
 git add "$CSV" .nuprc_sources.json
 git commit -m "${YEAR}: rebuild ${KIND} from the NUPRC report"
-echo
-echo "Committed. Review with 'git show', then: git push"
+
+if [ -n "$PUSH" ]; then
+    git push
+    echo "Committed and pushed."
+else
+    echo
+    echo "Committed. Review with 'git show', then: git push"
+fi

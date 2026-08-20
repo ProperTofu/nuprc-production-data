@@ -49,6 +49,7 @@ import os
 import re
 import sys
 import urllib.request
+from datetime import datetime, timezone
 from pathlib import Path
 
 logger = logging.getLogger("scrape_nuprc")
@@ -648,7 +649,12 @@ def main() -> int:
         "--url",
         help="PDF URL or local path; omitted, the newest is discovered",
     )
-    parser.add_argument("--year", type=int, required=True)
+    # Defaults to the current year so an unattended run needs no calendar
+    # arithmetic in a crontab, where a literal year silently stops working
+    # on 1 January and nothing announces it.
+    parser.add_argument(
+        "--year", type=int, default=datetime.now(timezone.utc).year
+    )
     parser.add_argument(
         "--kind",
         choices=("oil", "gas"),
