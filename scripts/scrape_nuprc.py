@@ -28,8 +28,9 @@ throwaway container. Committing is left to that wrapper, which has git and a
 checkout; this script only writes the file.
 
 Usage:
-    python scripts/scrape_nuprc.py --url <pdf-or-path> --year 2026
-    python scripts/scrape_nuprc.py --url <pdf-or-path> --year 2026 --kind gas
+    python scripts/scrape_nuprc.py --year 2026              # discovers the PDF
+    python scripts/scrape_nuprc.py --year 2026 --kind gas
+    python scripts/scrape_nuprc.py --year 2026 --url <pdf-or-path>
 
 Always pass the NEWEST release. Both reports are cumulative, so an older one
 carries fewer months, and every run rewrites the whole year -- the guard for
@@ -569,6 +570,60 @@ def send_alert(subject: str, body: str) -> None:
         logger.warning("could not send alert: %s", exc)
 
 
+
+# NUPRC's reports page renders client-side; this is what it calls. Not
+# /api/reports, which 404s. Found by reading the site's own JS bundle, since
+# nothing on the page itself names it.
+REPORTS_API = "https://www.nuprc.gov.ng/api/report-pages"
+FILES_API = "https://www.nuprc.gov.ng/api/files/"
+
+# The page each report lives under, and the document title within it. Both are
+# matched loosely: the oil document is titled "2026 Oil Production Data" and
+# the gas one "2026 Production data", so only the year is reliably shared.
+_PAGES = {
+    "oil": "oil production report",
+    "gas": "gas production status report",
+}
+
+
+def discover(kind: str, year: int) -> str:
+    """The published PDF's URL for this report and year.
+
+    Discovery rather than a fixed URL because the filename carries an opaque
+    hash that changes with every release: the July crude report is
+    JAN_TO_JULY_BOPD_921e5122f3a2ed7f7f69fca9.pdf. Nothing about it can be
+    predicted from the month.
+    """
+    request = urllib.request.Request(REPORTS_API, headers={"User-Agent": _UA})
+    with urllib.request.urlopen(request, timeout=45) as response:
+        catalogue = json.load(response)
+
+    wanted = _PAGES[kind]
+    for page in catalogue.get("data") or []:
+        if str(page.get("title", "")).strip().lower() != wanted:
+            continue
+        for doc in page.get("documents") or []:
+            title = str(doc.get("title", ""))
+            if str(year) not in title:
+                continue
+            path = doc.get("pdfUrl") or doc.get("fileUrl")
+            if not path:
+                logger.warning("%r has no PDF, only %r", title, doc.get("excelUrl"))
+                continue
+            logger.info(
+                "found %r, updated %s", title, str(doc.get("documentUpdatedAt"))[:10]
+            )
+            return FILES_API + path
+        raise SystemExit(
+            f"no {year} document under {page.get('title')!r}. NUPRC lists: "
+            + ", ".join(str(d.get("title")) for d in (page.get("documents") or []))
+        )
+    raise SystemExit(
+        f"no page titled {wanted!r} in the NUPRC catalogue. It lists: "
+        + ", ".join(str(p.get("title")) for p in (catalogue.get("data") or []))
+    )
+
+
 def fetch(url: str) -> bytes:
     request = urllib.request.Request(url, headers={"User-Agent": _UA})
     with urllib.request.urlopen(request, timeout=60) as response:
@@ -589,7 +644,10 @@ def fetch(url: str) -> bytes:
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--url", required=True, help="PDF URL, or a local path")
+    parser.add_argument(
+        "--url",
+        help="PDF URL or local path; omitted, the newest is discovered",
+    )
     parser.add_argument("--year", type=int, required=True)
     parser.add_argument(
         "--kind",
@@ -625,14 +683,17 @@ def main() -> int:
     args = parser.parse_args()
     logging.basicConfig(level=logging.INFO, format="%(levelname)s %(message)s")
 
-    pdf_source = args.url
-    source = Path(args.url)
+    # Unattended runs cannot be handed a file, and the published filename
+    # carries an opaque hash, so with no --url the catalogue is consulted.
+    url = args.url or discover(args.kind, args.year)
+    pdf_source = url
+    source = Path(url)
     if source.exists():
         pdf_path = source
         temporary = None
     else:
         temporary = Path(args.out) / "_nuprc_download.pdf"
-        temporary.write_bytes(fetch(args.url))
+        temporary.write_bytes(fetch(url))
         pdf_path = temporary
 
     published_at = pdf_published_at(pdf_path)
