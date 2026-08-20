@@ -126,7 +126,11 @@ def parse_pdf(
     read only so the terminal rows can be reconciled against a figure this
     parser did not derive.
     """
-    import fitz  # PyMuPDF, installed into the throwaway container
+    # Imported under its own name, not the legacy "fitz" alias: the wrapper
+    # installs the newest pymupdf on every run, and that alias is deprecated
+    # with removal promised, so this would break by itself one month with no
+    # change from us. Aliased so the call sites read the same.
+    import pymupdf as fitz  # installed into the throwaway container
 
     rows: list[list] = []
     published: dict[str, float] = {}
@@ -364,7 +368,7 @@ def parse_gas_pdf(path: str | Path) -> tuple[list[dict], dict[str, float]]:
     Columns are located by their headings rather than by position, so an
     inserted column does not silently shift every value one place left.
     """
-    import fitz
+    import pymupdf as fitz
 
     rows: list[dict] = []
     totals: dict[str, float] = {}
@@ -487,7 +491,7 @@ _PDF_DATE_RE = re.compile(r"D:(\d{4})(\d{2})(\d{2})(\d{2})(\d{2})(\d{2})")
 
 def pdf_published_at(path: str | Path) -> str | None:
     """The report's own creation date, as a sortable ISO string."""
-    import fitz
+    import pymupdf as fitz
 
     with fitz.open(str(path)) as doc:
         raw = (doc.metadata or {}).get("creationDate") or ""
