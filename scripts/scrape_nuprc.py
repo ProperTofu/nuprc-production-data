@@ -672,6 +672,11 @@ def main() -> int:
         "--dry-run", action="store_true", help="report what would change, write nothing"
     )
     parser.add_argument(
+        "--force",
+        action="store_true",
+        help="reparse even when the published report has not changed",
+    )
+    parser.add_argument(
         "--allow-older",
         action="store_true",
         help="permit a report published before the one the CSV was built from",
@@ -693,6 +698,23 @@ def main() -> int:
     # carries an opaque hash, so with no --url the catalogue is consulted.
     url = args.url or discover(args.kind, args.year)
     pdf_source = url
+
+    # Nothing republished, nothing to do. The published filename carries a
+    # hash that changes with every release, so an identical name means the
+    # same document. Worth checking because the cron window runs daily for
+    # ten to fifteen days and the report appears once: without this, a
+    # successful ingest on the 12th is followed by up to eight more runs that
+    # each download and reparse the same PDF to conclude nothing changed.
+    key = f"{args.kind}_{args.year}"
+    store_path = Path(args.out) / SOURCES_FILE
+    if not args.url and not args.force and store_path.exists():
+        known = json.loads(store_path.read_text(encoding="utf-8")).get(key, {})
+        if known.get("source") and known["source"] == Path(url).name:
+            logger.info(
+                "%s.csv already built from %s; nothing republished",
+                key, known["source"],
+            )
+            return 0
     source = Path(url)
     if source.exists():
         pdf_path = source
@@ -728,7 +750,7 @@ def main() -> int:
     months = sorted({r["month"] for r in rows}, key=lambda m: _MONTH_INDEX[m])
     logger.info("months %s to %s", months[0], months[-1])
 
-    filename = f"{args.kind}_{args.year}.csv"
+    filename = f"{key}.csv"
     if args.dry_run:
         logger.info("dry run, nothing written")
         for row in rows[:5]:
@@ -736,7 +758,6 @@ def main() -> int:
         return 0
 
     path = Path(args.out) / filename
-    key = f"{args.kind}_{args.year}"
     # Both "is this going backwards" checks, before the write. One compares
     # the months against the published file, the other compares the report's
     # own publication date against the one that built it.

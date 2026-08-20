@@ -242,6 +242,27 @@ def parse_workbook(data: bytes, history: bytes | None = None) -> list[dict]:
     return rows
 
 
+def read_existing(path: Path) -> list[dict]:
+    """Whatever is already published, so history need not be refetched.
+
+    The historical workbook is 4.3MB, is titled "for Mar 2024", and never
+    changes. Downloading it on every run pulled ~35MB a month from a source
+    that gives this data away for free, to recompute months that were already
+    sitting in the CSV. Those months are taken from the file instead, and the
+    workbook is fetched only when they are genuinely missing.
+    """
+    if not path.exists():
+        return []
+    out = []
+    with path.open(newline="", encoding="utf-8") as handle:
+        for row in csv.DictReader(handle):
+            try:
+                out.append({c: row["month"] if c == "month" else int(row[c]) for c in COLUMNS})
+            except (KeyError, ValueError):
+                logger.warning("skipped unreadable row in %s: %r", path.name, row)
+    return out
+
+
 def check_sane(rows: list[dict]) -> None:
     """Stop on figures that cannot be a Nigerian rig count.
 
@@ -300,6 +321,11 @@ def main() -> int:
         action="store_true",
         help="current workbook only, 2024 onwards",
     )
+    parser.add_argument(
+        "--rebuild-history",
+        action="store_true",
+        help="refetch the historical workbook instead of reusing published months",
+    )
     parser.add_argument("--dry-run", action="store_true")
     parser.add_argument("--allow-fewer-months", action="store_true")
     args = parser.parse_args()
@@ -322,11 +348,24 @@ def main() -> int:
             "could not find the current WorldWide Rig Count Report. Pass --url."
         )
 
+    path = Path(args.out) / OUTPUT
+    published = read_existing(path)
+
+    # The historical workbook is only fetched when the published CSV cannot
+    # supply the earlier months itself: on a first build, or when asked to
+    # rebuild them. Every other run skips 4.3MB it would only re-derive.
     history = history_source = None
-    if not args.no_history:
+    need_history = args.rebuild_history or not any(
+        r["month"] < "2024-01" for r in published
+    )
+    if args.no_history:
+        need_history = False
+    if need_history:
         history, history_source = load(args.history, _HISTORY_RE, "history")
         if history is None:
             logger.warning("no historical workbook; series starts at 2024-01")
+    else:
+        logger.info("history already published, not refetching the 4.3MB workbook")
 
     # An xlsx is a zip; anything else means a login page or an error body was
     # served instead, which openpyxl would report far less clearly.
@@ -339,9 +378,22 @@ def main() -> int:
     if history is not None and not history.startswith(b"PK"):
         raise SystemExit(f"{history_source} is not an xlsx.")
     rows = parse_workbook(data, history)
+
+    # Months the current workbook does not reach are taken from what is
+    # already published rather than refetched. The current workbook always
+    # wins where they overlap, being the newer publication.
+    if published:
+        earliest = rows[0]["month"]
+        carried = [r for r in published if r["month"] < earliest]
+        if carried:
+            logger.info(
+                "carried %d earlier month(s) from %s, back to %s",
+                len(carried), OUTPUT, carried[0]["month"],
+            )
+            rows = carried + rows
+
     check_sane(rows)
 
-    path = Path(args.out) / OUTPUT
     check_not_shrinking(rows, path, args.allow_fewer_months)
 
     latest = rows[-1]

@@ -60,8 +60,15 @@ done
 
 # Arguments reach bash as positional parameters after the `_` placeholder,
 # never interpolated into the -c string, so spaces in a filename survive.
+# pip's wheel cache is kept on the host, so the dependency is downloaded
+# once instead of on all 33 runs a month -- pymupdf alone is ~20MB, which
+# was the bulk of the bandwidth this pipeline used, for a script that runs
+# for ten seconds.
+PIPCACHE="$HOME/.cache/nui-scrapers-pip"
+mkdir -p "$PIPCACHE"
+
 "${DOCKER[@]}" run --rm \
-    -v "$REPO:/work" -w /work "${MOUNT[@]}" \
+    -v "$REPO:/work" -w /work "${MOUNT[@]}" -v "$PIPCACHE:/root/.cache/pip" \
     python:3.11-slim \
     bash -c 'pip install --quiet openpyxl && exec python scripts/scrape_rig_count.py "$@"' _ \
         --out /work "${ARGS[@]}"
