@@ -60,17 +60,19 @@ done
 
 # Arguments reach bash as positional parameters after the `_` placeholder,
 # never interpolated into the -c string, so spaces in a filename survive.
-# pip's wheel cache is kept on the host, so the dependency is downloaded
-# once instead of on all 33 runs a month -- pymupdf alone is ~20MB, which
-# was the bulk of the bandwidth this pipeline used, for a script that runs
-# for ten seconds.
-PIPCACHE="$HOME/.cache/nui-scrapers-pip"
-mkdir -p "$PIPCACHE"
+
+# Built once and reused. Rebuild by deleting the image, or with
+#   docker build -f scripts/scraper.Dockerfile -t $SCRAPER_IMAGE scripts/
+SCRAPER_IMAGE="nui-scraper:latest"
+if ! "${DOCKER[@]}" image inspect "$SCRAPER_IMAGE" >/dev/null 2>&1; then
+    echo "building $SCRAPER_IMAGE (first run only)" >&2
+    "${DOCKER[@]}" build -q -f "$REPO/scripts/scraper.Dockerfile" -t "$SCRAPER_IMAGE" "$REPO/scripts" >/dev/null
+fi
 
 "${DOCKER[@]}" run --rm \
-    -v "$REPO:/work" -w /work "${MOUNT[@]}" -v "$PIPCACHE:/root/.cache/pip" \
-    python:3.11-slim \
-    bash -c 'pip install --quiet openpyxl && exec python scripts/scrape_rig_count.py "$@"' _ \
+    -v "$REPO:/work" -w /work "${MOUNT[@]}" \
+    "$SCRAPER_IMAGE" \
+    bash -c 'exec python scripts/scrape_rig_count.py "$@"' _ \
         --out /work "${ARGS[@]}"
 
 for arg in "$@"; do

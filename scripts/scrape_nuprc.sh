@@ -83,12 +83,6 @@ for arg in "$@"; do
 done
 set -- "${ARGS[@]+"${ARGS[@]}"}"
 
-# pip's wheel cache is kept on the host, so the dependency is downloaded
-# once instead of on all 33 runs a month -- pymupdf alone is ~20MB, which
-# was the bulk of the bandwidth this pipeline used, for a script that runs
-# for ten seconds.
-PIPCACHE="$HOME/.cache/nui-scrapers-pip"
-mkdir -p "$PIPCACHE"
 
 MAIL=()
 for var in SMTP_HOST SMTP_PORT SMTP_USER SMTP_PASS EMAIL_FROM ALERT_EMAIL; do
@@ -99,10 +93,18 @@ done
 # never interpolated into the -c string. Interpolating splits on whitespace,
 # and these filenames are full of it: Baker Hughes ships
 # "July-2026  WorldWide Rig Count Report.xlsx", two spaces included.
+# Built once and reused. Rebuild by deleting the image, or with
+#   docker build -f scripts/scraper.Dockerfile -t $SCRAPER_IMAGE scripts/
+SCRAPER_IMAGE="nui-scraper:latest"
+if ! "${DOCKER[@]}" image inspect "$SCRAPER_IMAGE" >/dev/null 2>&1; then
+    echo "building $SCRAPER_IMAGE (first run only)" >&2
+    "${DOCKER[@]}" build -q -f "$REPO/scripts/scraper.Dockerfile" -t "$SCRAPER_IMAGE" "$REPO/scripts" >/dev/null
+fi
+
 "${DOCKER[@]}" run --rm \
-    -v "$REPO:/work" -w /work "${MOUNT[@]}" "${MAIL[@]}" -v "$PIPCACHE:/root/.cache/pip" \
-    python:3.11-slim \
-    bash -c 'pip install --quiet pymupdf && exec python scripts/scrape_nuprc.py "$@"' _ \
+    -v "$REPO:/work" -w /work "${MOUNT[@]}" "${MAIL[@]}" \
+    "$SCRAPER_IMAGE" \
+    bash -c 'exec python scripts/scrape_nuprc.py "$@"' _ \
         "${YEARARG[@]}" --out /work "${URLARG[@]}" "$@"
 
 # --dry-run writes nothing, so there is nothing to commit and git would fail
