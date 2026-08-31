@@ -24,15 +24,34 @@ REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 # enough for docker and git here, but not somewhere to rely on luck.
 export PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
 
-# The app's own env file carries the SMTP settings the alert needs. Sourced
+# The app's own env file carries the SMTP settings the alert needs. Read
 # rather than duplicated, so there is one place to change a password. Absent,
 # the scrapers simply log that no alert was sent and still fail loudly.
+#
+# READ, not sourced. That file is a docker --env-file, in which a value runs
+# literally to the end of the line. Bash is not docker, and read the same line
+# as code:
+#
+#   EMAIL_FROM=NUI Terminal <the.nuiterminal@gmail.com>
+#
+# gave "syntax error near unexpected token `newline'" because bash took the
+# angle brackets as redirection. Sourcing stops there, so every variable BELOW
+# that line went unset while the script carried on looking healthy. Quoting
+# the value in .env would satisfy bash and break docker, which keeps the
+# quotes as part of the sender address.
+#
+# Only the variables the alert needs are taken, split on the first "=" and
+# assigned without interpretation, so no value can be executed whatever it
+# contains.
 ENV_FILE="/home/ubuntu/nui-terminal/.env"
 if [ -r "$ENV_FILE" ]; then
-    set -a
-    # shellcheck disable=SC1090
-    . "$ENV_FILE"
-    set +a
+    while IFS='=' read -r _key _value; do
+        case "$_key" in
+            SMTP_HOST|SMTP_PORT|SMTP_USER|SMTP_PASS|EMAIL_FROM)
+                export "$_key=$_value" ;;
+        esac
+    done < "$ENV_FILE"
+    unset _key _value
 fi
 # Alerts go to a person, not to the terminal's own mailbox.
 export ALERT_EMAIL="${ALERT_EMAIL:-vallychivia@gmail.com}"
