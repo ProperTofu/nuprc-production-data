@@ -277,7 +277,6 @@ def _parse_lifting(ws, document: str, result: dict) -> None:
             f"{document}: lifting sheet has no Company column")
 
     current: dict | None = None
-    prev_partner: float | None = None
     for row in ws.iter_rows(min_row=header_row + 1, values_only=True):
         def at(idx):
             return row[idx] if idx is not None and idx < len(row) else None
@@ -313,19 +312,25 @@ def _parse_lifting(ws, document: str, result: dict) -> None:
                 "document": document,
             }
             result["lifting"].append(current)
-            prev_partner = published_partner
 
         cargo_id = _text(at(c_cargo))
         volume = _num(at(c_equity))
         if cargo_id and current is not None and volume:
-            # A cargo. On a company header row the cargo columns describe a
+            # A cargo, carrying NNPC'S EQUITY SHARE of it -- the breakdown
+            # rows populate the equity column, not the crude-volume one, and
+            # they sum to the company's stated equity lift (which is what
+            # _reconcile checks). It is NOT the size of the cargo: Pan Ocean's
+            # OML 147 row lifts 161,000 bbl of which NNPC's equity is 1,000.
+            # Named in full in the CSV so nobody reads it as the cargo total.
+            #
+            # On a company header row the cargo columns describe a
             # single-cargo month, so the header's own volume is that cargo.
             result["cargoes"].append({
                 "company": current["company"],
                 "field": current["field"],
                 "month": current["month"],
                 "lifting_date": _text(at(c_date)),
-                "volume_bbl": volume,
+                "nnpc_equity_lift_bbl": volume,
                 "cargo_id": cargo_id,
                 "buyer": _text(at(c_buyer)),
                 "destination": _text(at(c_dest)),
@@ -534,7 +539,7 @@ def main() -> int:
             "nnpc_equity_lift_bbl", "partner_lift_bbl",
             "partner_lift_source_disagreed", "cargoes_listed", "document"])
     _write(out / "nnpc_lifting_cargoes.csv", cargoes,
-           ["company", "month", "lifting_date", "field", "volume_bbl",
+           ["company", "month", "lifting_date", "field", "nnpc_equity_lift_bbl",
             "cargo_id", "buyer", "destination", "export_or_domestic",
             "document"])
     _write(out / "nnpc_production_by_field.csv", production,

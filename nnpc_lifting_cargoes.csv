@@ -1,5 +1,5 @@
 # NNPC Ltd's own disclosure for NNPC-interest assets. Not NUPRC data, not a national total. partner_lift_bbl is DERIVED (crude - equity lift): the published column is misaligned -- see scripts/scrape_nnpc_disclosures.py.
-company,month,lifting_date,field,volume_bbl,cargo_id,buyer,destination,export_or_domestic,document
+company,month,lifting_date,field,nnpc_equity_lift_bbl,cargo_id,buyer,destination,export_or_domestic,document
 BELEMAOIL,2026-02,2026-02-01,OML 55,90000.0,JV/EXP/BELEMA/11-25/CO-26,NTSA,"DANGOTE PETROLEUM REFINERY & PETROCHEMICALS FZE, DANGOTE INDUSTRIES FZE.",Domestic,NNPC_LTD_PRODUCTION_LIFTING_AND_GAS_DATA_Q1_2026_NUIMS_0d133ba414.xlsx
 BELEMAOIL,2026-03,2026-03-01,OML 55,130900.0,JV/EXP/BELEMA/01-26/CO-08,NTSA,"DANGOTE PETROLEUM REFINERY & PETROCHEMICALS FZE, DANGOTE INDUSTRIES FZE.",Domestic,NNPC_LTD_PRODUCTION_LIFTING_AND_GAS_DATA_Q1_2026_NUIMS_0d133ba414.xlsx
 CHEVRON,2026-01,2026-01-15,"PMLs 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50",998301.0,JV/EXP/CNL/11-25/NDS-07,NTSA,"TARRAGONA, SPAIN",Export,NNPC_LTD_PRODUCTION_LIFTING_AND_GAS_DATA_Q1_2026_NUIMS_0d133ba414.xlsx

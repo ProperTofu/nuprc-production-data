@@ -66,6 +66,15 @@ The derived figure is internally consistent for every row.
 `partner_lift_source_disagreed` flags each row where NNPC's own cell
 disagreed, so if they fix the workbook it will show.
 
+### `nnpc_lifting_cargoes.csv` holds NNPC's SHARE of each cargo
+
+The column is `nnpc_equity_lift_bbl`, not the size of the cargo. NNPC's
+breakdown rows itemise their own equity lift, and they sum exactly to the
+company's stated equity lift for the month (50,586,796 bbl across Q1 2026,
+which is what the parser reconciles against). Pan Ocean's OML 147 cargo
+moved 161,000 bbl of which NNPC's equity was 1,000 — the file records
+1,000. Do not sum this column and call it liftings from those fields.
+
 ### What else is in those folders
 
 The quarterly disclosure folders also hold NEPL's own-asset workbook (one
