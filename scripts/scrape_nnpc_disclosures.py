@@ -551,8 +551,13 @@ def main() -> int:
             "nnpc_equity_pct", "document"])
 
     with open(out / "nnpc_disclosures_manifest.json", "w", encoding="utf-8") as f:
+        # No run date in here. It changed on every run, so the file differed
+        # every time even when NNPC had published nothing, and the wrapper
+        # committed "disclosures: refresh" monthly to record only that the
+        # scraper had run. git log already says when. What belongs in a
+        # manifest is which documents were seen, which is what changes when
+        # something actually happens.
         json.dump({
-            "generated": datetime.now(timezone.utc).strftime("%Y-%m-%d"),
             "documents": sorted(r["document"] for r in parsed),
             "unavailable": sorted(dead),
             "skipped_other_document_types": sorted(skipped),

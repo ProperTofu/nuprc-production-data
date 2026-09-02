@@ -86,7 +86,14 @@ fi
 
 # Name the new report in the commit when there is one, so `git log` says
 # what arrived rather than only that something did.
-NEW="$(git diff -- nnpc_disclosures_manifest.json | grep -oE '"NNPC[A-Za-z0-9_]+\.xlsx"' | head -1 | tr -d '"')"
+# The manifest often does not change when a CSV does -- a run that revises
+# figures without adding a document is the normal case. `grep` then finds
+# nothing and exits 1, `pipefail` propagates that, and `set -e` kills the
+# script HERE, after the scraper has already done its work and before
+# anything is committed. It exits 1 with no message at all, which reads as
+# the scraper failing when the scraper succeeded. `|| true` because an
+# empty result is a legitimate answer: nothing new arrived.
+NEW="$(git diff -- nnpc_disclosures_manifest.json | grep -oE '"NNPC[A-Za-z0-9_]+\.xlsx"' | head -1 | tr -d '"' || true)"
 if [ -n "$NEW" ]; then
     MSG="NNPC disclosures: add $NEW"
 else
