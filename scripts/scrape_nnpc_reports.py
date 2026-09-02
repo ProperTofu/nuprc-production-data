@@ -444,7 +444,14 @@ def _load_manifest(out: Path) -> dict:
 def _write_csv(path: Path, fieldnames: list[str], rows: list[dict], note: str) -> None:
     with open(path, "w", encoding="utf-8", newline="") as f:
         f.write(f"# {note}\n")
-        writer = csv.DictWriter(f, fieldnames=fieldnames)
+        # An explicit LF terminator. csv.writer defaults to CRLF on EVERY
+        # platform, so the data rows came out CRLF while the comment line
+        # above them was LF. Git on Windows strips the CR going into the
+        # index and Linux does not, so a laptop and the VM each rewrote the
+        # other's version forever: one churn commit per run, 349 lines
+        # changed and not a figure different. Same fix as scrape_nuprc.py,
+        # whose own note says it keeps the file byte-identical.
+        writer = csv.DictWriter(f, fieldnames=fieldnames, lineterminator="\n")
         writer.writeheader()
         for row in rows:
             writer.writerow(row)

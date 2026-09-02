@@ -437,7 +437,12 @@ def _reconcile(result: dict) -> list[str]:
 def _write(path: Path, rows: list[dict], fields: list[str]) -> None:
     with open(path, "w", encoding="utf-8", newline="") as f:
         f.write(f"# {_PROVISIONAL}\n")
-        w = csv.DictWriter(f, fieldnames=fields, extrasaction="ignore")
+        # An explicit LF terminator -- see the note in scrape_nnpc_reports.py.
+        # csv.writer defaults to CRLF on every platform, and git strips it on
+        # Windows but not on Linux, so a laptop and the VM ping-pong the whole
+        # file on every run.
+        w = csv.DictWriter(f, fieldnames=fields, extrasaction="ignore",
+                           lineterminator="\n")
         w.writeheader()
         for row in sorted(rows, key=lambda r: tuple(
                 str(r.get(k) or "") for k in fields[:3])):
