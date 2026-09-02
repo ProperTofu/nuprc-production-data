@@ -5,6 +5,7 @@
 #   ./scripts/cron_refresh.sh gas
 #   ./scripts/cron_refresh.sh rig
 #   ./scripts/cron_refresh.sh rigdisp
+#   ./scripts/cron_refresh.sh nnpc
 #
 # A thin entry point on purpose. Putting this in the crontab line itself meant
 # a long, quoted one-liner that could not be run by hand to see what it does,
@@ -14,8 +15,8 @@ set -uo pipefail
 
 SOURCE="${1:-}"
 case "$SOURCE" in
-    oil|gas|rig|rigdisp) ;;
-    *) echo "usage: $0 <oil|gas|rig|rigdisp>" >&2; exit 2 ;;
+    oil|gas|rig|rigdisp|nnpc) ;;
+    *) echo "usage: $0 <oil|gas|rig|rigdisp|nnpc>" >&2; exit 2 ;;
 esac
 
 REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -72,6 +73,9 @@ case "$SOURCE" in
     rig) bash scripts/scrape_rig_count.sh --push ;;
     # NUPRC's own register: every rig in country, not just those drilling.
     rigdisp) bash scripts/scrape_rig_disposition.sh --push ;;
+    # NNPC Ltd's own monthly summary. Their figures, not NUPRC's: the
+    # gas number runs 100-500 mmscf/d below the regulator's every month.
+    nnpc) bash scripts/scrape_nnpc_reports.sh --push ;;
 esac
 status=$?
 
