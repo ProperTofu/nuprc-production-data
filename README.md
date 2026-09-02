@@ -9,6 +9,10 @@
 | `rig_count_nigeria.csv` | **Baker Hughes** worldwide rig count | Monthly, first week of the following month |
 | `nnpc_monthly_production.csv` | **NNPC Ltd** monthly report summary | Monthly, uploaded late in the following month |
 | `nnpc_report_headline.csv` | **NNPC Ltd** monthly report summary | Monthly, one row per report |
+| `nnpc_lifting_by_company.csv` | **NNPC Ltd** statutory disclosure | Quarterly, per company/field/month |
+| `nnpc_lifting_cargoes.csv` | **NNPC Ltd** statutory disclosure | Quarterly, one row per cargo |
+| `nnpc_production_by_field.csv` | **NNPC Ltd** statutory disclosure | Quarterly, per company/field/month |
+| `nnpc_asset_equity.csv` | **NNPC Ltd** statutory disclosure | Quarterly, per block |
 
 `scripts/` rebuilds all of them. `scrape_nuprc.py` discovers the newest NUPRC
 report from the regulator's own catalogue; `scrape_rig_count.py` finds the
@@ -42,6 +46,35 @@ because their meaning shifts: statutory payments are cumulative year-to-date
 (726 in January, 7,913 by July) even where the label says only "Statutory
 Payments Feb". Differencing two of those gives a month; assuming they are
 already monthly gives nonsense.
+
+### The partner-lift column in NNPC's disclosure is misaligned
+
+`nnpc_lifting_by_company.csv` reports `partner_lift_bbl` DERIVED as
+`crude_volume_bbl - nnpc_equity_lift_bbl`. NNPC's own `Partner_Lift_bbl`
+column is **not** used, and should not be.
+
+In `NNPC_LTD_PRODUCTION_LIFTING_AND_GAS_DATA_Q1_2026` that column is correct
+for the first block of the sheet and then shifts up by one row: from row 94
+on, a company's cell holds the NEXT company's partner lift. Measured on
+2026-09-02: 48 rows agree with their own arithmetic, 38 match the following
+row instead. SNEPCO's 2,000,161 sits on TUPNI-EGINA's row; HEIRS' 124,000
+sits on SEPLAT's. Read as published, companies are credited with a
+neighbour's liftings — plausible numbers, wrong company, undetectable
+downstream.
+
+The derived figure is internally consistent for every row.
+`partner_lift_source_disagreed` flags each row where NNPC's own cell
+disagreed, so if they fix the workbook it will show.
+
+### What else is in those folders
+
+The quarterly disclosure folders also hold NEPL's own-asset workbook (one
+company, flat cargo list, published as "Copy of …" with the author's
+`Working` tabs still in it and Q1 lifting dates reading 2026-09-01),
+exploration registers, and commercial-arrangement workbooks. These are
+skipped and listed, not parsed. **Every Q2 2026 file is listed by NNPC's CMS
+but returns `BlobNotFound` from their CDN** — reported as UNAVAILABLE, and
+it does not stop the readable quarters from being written.
 
 ### On the rig count being here
 

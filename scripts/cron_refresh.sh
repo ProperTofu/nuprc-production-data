@@ -5,7 +5,8 @@
 #   ./scripts/cron_refresh.sh gas
 #   ./scripts/cron_refresh.sh rig
 #   ./scripts/cron_refresh.sh rigdisp
-#   ./scripts/cron_refresh.sh nnpc
+#   ./scripts/cron_refresh.sh nnpc      # the monthly report summary
+#   ./scripts/cron_refresh.sh nnpcdisc  # per-company liftings, quarterly
 #
 # A thin entry point on purpose. Putting this in the crontab line itself meant
 # a long, quoted one-liner that could not be run by hand to see what it does,
@@ -15,8 +16,8 @@ set -uo pipefail
 
 SOURCE="${1:-}"
 case "$SOURCE" in
-    oil|gas|rig|rigdisp|nnpc) ;;
-    *) echo "usage: $0 <oil|gas|rig|rigdisp|nnpc>" >&2; exit 2 ;;
+    oil|gas|rig|rigdisp|nnpc|nnpcdisc) ;;
+    *) echo "usage: $0 <oil|gas|rig|rigdisp|nnpc|nnpcdisc>" >&2; exit 2 ;;
 esac
 
 REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -76,6 +77,9 @@ case "$SOURCE" in
     # NNPC Ltd's own monthly summary. Their figures, not NUPRC's: the
     # gas number runs 100-500 mmscf/d below the regulator's every month.
     nnpc) bash scripts/scrape_nnpc_reports.sh --push ;;
+    # NNPC's statutory disclosures: liftings per company, per cargo.
+    # Quarterly, so most runs find nothing new.
+    nnpcdisc) bash scripts/scrape_nnpc_disclosures.sh --push ;;
 esac
 status=$?
 
