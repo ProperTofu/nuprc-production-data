@@ -84,6 +84,12 @@ KNOWN_TERMINALS = frozenset({
     "ABO", "AGBAMI", "AJAPA", "AJE", "AKPO", "ANTAN", "ANYALA MADU (CJ Blend)",
     "BONGA", "BONNY", "BRASS", "CAWTHORNE", "EBOK", "EGINA", "ERHA",
     "ESCRAVOS (Oil Terminal)", "FORCADOS", "IMA", "NEMBE",
+    # Not a renamed "ESCRAVOS (Oil Terminal)", though it reads like one. First
+    # published September 2026 as a standalone unblended condensate stream on
+    # page 2, beside AGBAMI and AKPO, while the terminal stays on page 1 with
+    # its own crude and condensate. Merging the two would put 15.80 kb/d of
+    # unblended condensate into the terminal's 4.86 and quadruple it.
+    "ESCRAVOS",
     "ODUDU (AMENAM BLEND)", "OKONO", "OKORO (Ex Ima Terminal)", "OKWORI",
     "OTAKPIPO", "OYO / OBODO", "PENNINGTON", "QUA IBOE", "SEA EAGLE (EA)",
     "TULJA - OKWUIBOME", "UGO OCHA (JONES CREEK)", "USAN", "UTAPATE", "YOHO",
