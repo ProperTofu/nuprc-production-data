@@ -89,20 +89,6 @@ KNOWN_TERMINALS = frozenset({
     "TULJA - OKWUIBOME", "UGO OCHA (JONES CREEK)", "USAN", "UTAPATE", "YOHO",
 })
 
-# A known terminal NUPRC has printed under a different label, mapped onto the
-# name every existing CSV already uses. Without this the only ways past the
-# check were adding the new label to KNOWN_TERMINALS or --allow-new-terminals,
-# and both write it as a SEPARATE terminal: one stream's history split across
-# two names, every chart and per-terminal total quietly halved from that
-# month on. Each value must be a KNOWN_TERMINALS name.
-#
-# ESCRAVOS: the report fetched on 2026-10-14 dropped the "(Oil Terminal)" suffix
-# it carries in every file from 2020. Same Chevron terminal, same stream.
-TERMINAL_ALIASES = {
-    "ESCRAVOS": "ESCRAVOS (Oil Terminal)",
-}
-assert set(TERMINAL_ALIASES.values()) <= KNOWN_TERMINALS
-
 # Rounding of the two-decimal per-terminal rates against NUPRC's own total.
 # Observed worst case across seven months is 0.02 kb/d.
 _TOTAL_TOLERANCE_KBD = 0.5
@@ -220,7 +206,6 @@ def parse_pdf(
     out: list[tuple[str, str, dict[str, float | None]]] = []
     for group in groups:
         terminal = name_of(group)
-        terminal = TERMINAL_ALIASES.get(terminal, terminal)
         if not terminal:
             logger.warning("group with no terminal name, skipped: %r", group)
             continue
