@@ -10,6 +10,8 @@
   "skipped_other_document_types": [
     "Copy_of_NEPL_PRODUCTION_LIFTING_AND_GAS_DATA_Q1_2026_1191a330fa.xlsx: lifting sheet has no Company column",
     "NEPL_Exploration_Disclosure_Q1_2026_24eef8d17a.xlsx: sheets are ['Licence_Register', 'Exploration_Activities', 'Exploration_Wells', 'Discoveries_and_Resources', 'Environmental_Regulatory']",
+    "NNPC_E_and_P_LTD_Exploration_Disclosure_Q3_2026_b2e2e77fce.xlsx: sheets are ['Licence_Register', 'Exploration_Activities', 'Exploration_Wells', 'Discoveries_and_Resources', 'Environmental_Regulatory']",
+    "NNPC_E_and_P_LTD_Production_Lifting_and_Gas_Data_for_Q3_2026_09f55d6821.xlsx: lifting sheet has no Company column",
     "NNPC_LTD_Commercial_Arrangements_and_Participation_e88f7e511f.xlsx: sheets are ['Commercial Arrangement', 'Concessions Held', 'Interests in Subsidiaries']"
   ],
   "partner_lift_rows_where_source_disagreed": 39,
