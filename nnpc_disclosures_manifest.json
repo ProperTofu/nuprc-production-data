@@ -1,6 +1,7 @@
 {
   "documents": [
-    "NNPC_LTD_PRODUCTION_LIFTING_AND_GAS_DATA_Q1_2026_NUIMS_0d133ba414.xlsx"
+    "NNPC_LTD_PRODUCTION_LIFTING_AND_GAS_DATA_Q1_2026_NUIMS_0d133ba414.xlsx",
+    "NNPC_LTD_PRODUCTION_LIFTING_AND_GAS_DATA_Q3_2026_c4d8d8495d.xlsx"
   ],
   "unavailable": [
     "NNPC_E_and_P_LTD_Exploration_Disclosure_Q2_2026_d99bc83831.xlsx: 404 from the CDN",
@@ -14,6 +15,6 @@
     "NNPC_E_and_P_LTD_Production_Lifting_and_Gas_Data_for_Q3_2026_09f55d6821.xlsx: lifting sheet has no Company column",
     "NNPC_LTD_Commercial_Arrangements_and_Participation_e88f7e511f.xlsx: sheets are ['Commercial Arrangement', 'Concessions Held', 'Interests in Subsidiaries']"
   ],
-  "partner_lift_rows_where_source_disagreed": 39,
-  "partner_lift_rows_checked": 87
+  "partner_lift_rows_where_source_disagreed": 40,
+  "partner_lift_rows_checked": 177
 }
