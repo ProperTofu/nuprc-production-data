@@ -15,8 +15,8 @@ FROM python:3.11-slim
 
 # pymupdf reads the NUPRC production PDFs; openpyxl reads the Baker Hughes
 # workbooks. Both scrapers are standard library apart from these.
-# pymupdf pinned below 2: on 2.1 page.find_tables() returns no rows for
-# either NUPRC PDF, so both oil and gas scrapes fail (checked 2026-11-19
-# against the Jan-Oct oil and Jan-Aug gas reports; 1.28.2 reproduces the
-# published CSVs exactly). Unpinned, the next image rebuild would break them.
+# pymupdf pinned so a rebuild cannot change what the scrapers read. The
+# NUPRC parser now reads positioned words rather than find_tables(), and
+# reproduces the published CSVs on both 1.28.2 and 2.1 (checked 2026-11-19);
+# the pin is there so an untested release never reaches a cron run first.
 RUN pip install --no-cache-dir "pymupdf==1.28.2" openpyxl

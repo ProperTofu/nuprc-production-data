@@ -124,6 +124,61 @@ def _number(value: object) -> float | None:
         return None
 
 
+# ------------------------------------------------------- page reading -----
+#
+# Both reports are read from positioned words, not from pymupdf's table
+# finder. find_tables() is a heuristic whose output changed under us: on
+# pymupdf 2.1 it finds no grid at all on page 2 of the oil report, glues the
+# gas sheet into a 4x5 table, and joins "Liquid Type" into "LiquidType", so
+# both scrapes failed with "no rows found" (seen 2026-11-19). The words
+# themselves -- text plus a bounding box -- come out identical on 1.28 and
+# 2.1, and a row is just the words that share a baseline, so that is what the
+# parsers build on.
+
+# The diagonal NUPRC watermark extracts as its own oversized words ("NUPRC",
+# "NU", "RC" spanning hundreds of points) or, on some releases, single
+# letters. No real label in either report is made only of these letters.
+_WATERMARK_WORD_RE = re.compile(r"^[NUPRC]+$")
+
+# Words whose vertical centres are this close (points) share a row. Rows are
+# about 10pt apart; a terminal name printed in a merged cell sits 1-2pt off
+# its figures (OYO / OBODO at 120 vs 121).
+_ROW_TOLERANCE = 3.0
+
+_VALUE_RE = re.compile(r"\(-?[\d,]*\.?\d+\)|-?[\d,]*\.?\d+%?|[-–—]|#DIV/0!")
+
+
+def _page_lines(page) -> list[list[tuple[float, float, str]]]:
+    """The page's words grouped into rows, top to bottom, each row left to right.
+
+    A word is (x0, x1, text).
+    """
+    words = []
+    for x0, y0, x1, y1, text, *_ in page.get_text("words"):
+        if _WATERMARK_WORD_RE.match(text) and (len(text) == 1 or x1 - x0 > 60):
+            continue
+        words.append(((y0 + y1) / 2, x0, x1, text))
+    words.sort()
+    lines: list[list[tuple[float, float, str]]] = []
+    anchor = None
+    for yc, x0, x1, text in words:
+        if anchor is None or yc - anchor > _ROW_TOLERANCE:
+            lines.append([])
+            anchor = yc
+        lines[-1].append((x0, x1, text))
+    return [sorted(line) for line in lines]
+
+
+def _is_value(text: str) -> bool:
+    return bool(_VALUE_RE.fullmatch(text))
+
+
+def _nearest(x: float, centres: dict):
+    """The key whose centre is closest to x: figures are right-aligned in
+    their cells, so they sit near, not exactly under, the heading's centre."""
+    return min(centres, key=lambda k: abs(centres[k] - x))
+
+
 def parse_pdf(
     path: str | Path,
 ) -> tuple[list[tuple[str, str, dict[str, float | None]]], dict[str, float]]:
@@ -134,53 +189,77 @@ def parse_pdf(
     read only so the terminal rows can be reconciled against a figure this
     parser did not derive.
     """
-    # Imported under its own name, not the legacy "fitz" alias: the wrapper
-    # installs the newest pymupdf on every run, and that alias is deprecated
-    # with removal promised, so this would break by itself one month with no
-    # change from us. Aliased so the call sites read the same.
-    import pymupdf as fitz  # installed into the throwaway container
+    # Imported under its own name, not the legacy "fitz" alias, which is
+    # deprecated with removal promised.
+    import pymupdf as fitz
 
     rows: list[list] = []
     published: dict[str, float] = {}
     with fitz.open(str(path)) as doc:
         for page in doc:
-            for table in page.find_tables().tables:
-                header: dict[int, str] | None = None
-                for raw in table.extract():
-                    cells = [_clean(c) for c in raw]
-                    if cells[:2] == ["TERMINAL/STREAM", "Liquid Type"]:
-                        # Column order is read from the header rather than
-                        # assumed: the sheet carries all twelve months from
-                        # January, with the unpublished ones dashed out.
-                        header = {i: c for i, c in enumerate(cells) if c in MONTHS}
-                        continue
-                    if header is None:
-                        continue
-                    name, liquid = cells[0], cells[1]
-                    # The foot of page 2. "Blend Total" is a terminal's own
-                    # subtotal and is handled below; a bare "Total" is the
-                    # national line, and the only figure here that this
-                    # parser does not compute for itself.
-                    if liquid == "Total":
-                        published = {
-                            m: v
-                            for i, m in header.items()
-                            if (v := _number(raw[i])) is not None
-                        }
-                        continue
-                    # Blend Total is carried through grouping and dropped
-                    # afterwards: it is one more row a merged terminal cell
-                    # could have been attached to.
-                    if liquid not in (*_EMITTED, "Blend Total"):
-                        continue
-                    # The national totals block at the foot of page 2 repeats
-                    # the same liquid-type labels and would otherwise be read
-                    # as a terminal called "Daily Average".
-                    if name.startswith("Daily Average"):
-                        continue
-                    rows.append(
-                        [name, liquid, {m: _number(raw[i]) for i, m in header.items()}]
-                    )
+            lines = _page_lines(page)
+            # Column positions come from the header row on each page: the
+            # sheet carries all twelve months from January, with the
+            # unpublished ones dashed out, and a figure belongs to the month
+            # whose heading it sits under.
+            head = next(
+                (i for i, ln in enumerate(lines)
+                 if any(t == "TERMINAL/STREAM" for _, _, t in ln)
+                 and any(t == "Liquid" for _, _, t in ln)),
+                None,
+            )
+            if head is None:
+                continue
+            liquid_x = next(x0 for x0, _, t in lines[head] if t == "Liquid")
+            months = {t: (x0 + x1) / 2 for x0, x1, t in lines[head] if t in MONTHS}
+            values_x = min(x0 for x0, _, t in lines[head] if t in MONTHS) - 3
+
+            def name_of_line(ln):
+                return " ".join(t for x0, _, t in ln if x0 < liquid_x - 1)
+
+            def liquid_of_line(ln):
+                return " ".join(t for x0, _, t in ln if liquid_x - 1 <= x0 < values_x)
+
+            body = lines[head + 1:]
+            # The national block at the foot of page 2 repeats the liquid
+            # labels ("Crude Oil", "Condensate") beside a merged "Daily
+            # Average" cell whose label is centred on its second row. The
+            # block starts at the Crude Oil line just above that label; from
+            # there on only the "Total" line is read.
+            block = len(body)
+            daily = next(
+                (i for i, ln in enumerate(body)
+                 if name_of_line(ln).startswith("Daily Average")),
+                None,
+            )
+            if daily is not None:
+                block = next(
+                    (i for i in range(daily, -1, -1)
+                     if liquid_of_line(body[i]) == "Crude Oil"),
+                    daily,
+                )
+
+            for i, ln in enumerate(body):
+                name, liquid = name_of_line(ln), liquid_of_line(ln)
+                # Only rows carrying a liquid label hold figures; this also
+                # keeps the remarks under the table ("101% of OPEC quota")
+                # from being read as cells.
+                if liquid not in (*_EMITTED, "Blend Total", "Total"):
+                    continue
+                values: dict[str, float | None] = {}
+                for x0, x1, t in ln:
+                    if x0 >= values_x and _is_value(t):
+                        values[_nearest((x0 + x1) / 2, months)] = _number(t)
+                # A bare "Total" is the national line, and the only figure
+                # here that this parser does not compute for itself.
+                if liquid == "Total":
+                    published = {m: v for m, v in values.items() if v is not None}
+                    continue
+                if i >= block:
+                    continue
+                # Blend Total is carried through grouping and dropped
+                # afterwards: it is one more row a terminal name could sit on.
+                rows.append([name, liquid, {m: values.get(m) for m in months}])
 
     if not rows:
         raise ValueError(f"no production rows found in {path} -- is this the BOPD report?")
@@ -382,44 +461,78 @@ def parse_gas_pdf(path: str | Path) -> tuple[list[dict], dict[str, float]]:
     totals: dict[str, float] = {}
     with fitz.open(str(path)) as doc:
         for page in doc:
-            for table in page.find_tables().tables:
-                data = table.extract()
-                column: dict[str, int] = {}
-                for raw in data:
-                    cells = [_clean(c) for c in raw]
-                    if not column:
-                        heads = [_norm_header(c) for c in cells]
-                        for field, wanted in _GAS_FIELDS:
-                            for want in wanted:
-                                key = _norm_header(want)
-                                hit = next(
-                                    (i for i, h in enumerate(heads) if h.startswith(key)),
-                                    None,
-                                )
-                                if hit is not None:
-                                    column[field] = hit
-                                    break
-                        # Every field must be found, or the mapping is wrong
-                        # and the values would be filed under the wrong names.
-                        if len(column) != len(_GAS_FIELDS):
-                            column = {}
-                        continue
+            lines = _page_lines(page)
+            first = next(
+                (i for i, ln in enumerate(lines) if ln[0][2].upper() in MONTHS),
+                None,
+            )
+            if first is None:
+                continue
+            label_x1 = lines[first][0][1]
+            data = [ln for ln in lines[first:] if ln[0][2].upper() in MONTHS]
 
-                    label = cells[0].upper()
-                    values = {
-                        field: _number(raw[i]) for field, i in column.items()
-                    }
-                    if label == "TOTAL":
-                        totals = {f: v for f, v in values.items() if v is not None}
+            # Cells are anchored on the figures, not the headings. Headings
+            # are laid out differently from release to release -- 2026 stacks
+            # "TOTAL GAS / PRODUCTION / (MMSCF)" inside each column, 2025
+            # prints "NAG PRODUCTION" on one line and lets "TOTAL GAS /
+            # UTILISED" drift sideways -- but the figures are right-aligned,
+            # so each cell's right edge is where its numbers end. The fullest
+            # month row gives those edges, and a cell runs from the previous
+            # edge to its own.
+            template = max(
+                data, key=lambda ln: sum(1 for *_, t in ln[1:] if _is_value(t) and t[0].isdigit())
+            )
+            edges = [x1 + 3 for x0, x1, t in template[1:] if _is_value(t)]
+
+            def cell_of(x1: float) -> int:
+                return next((i for i, e in enumerate(edges) if x1 <= e), len(edges) - 1)
+
+            # Heading words go to the cell they sit in, and each cell's
+            # heading is read top to bottom, left to right.
+            words: dict[int, list] = {}
+            for row, ln in enumerate(lines[max(0, first - 3):first]):
+                for x0, x1, t in ln:
+                    if x1 <= label_x1 + 5:  # "MONTHS", the row-label column
                         continue
-                    if label not in MONTHS:
-                        continue
-                    # Months NUPRC has not published yet are blank or dashed
-                    # across the row, and #DIV/0! in the percentage columns.
-                    # They are skipped, not written as zero.
-                    if all(v is None for v in values.values()):
-                        continue
-                    rows.append({"month": label, **values})
+                    words.setdefault(cell_of((x0 + x1) / 2), []).append((row, x0, t))
+            heads = {i: _norm_header(" ".join(t for *_, t in sorted(ws))) for i, ws in words.items()}
+
+            # Columns are located by their headings rather than by position,
+            # so an inserted column does not silently shift every value.
+            column: dict[str, int] = {}
+            for field, wanted in _GAS_FIELDS:
+                for want in wanted:
+                    key = _norm_header(want)
+                    hit = next((i for i, h in sorted(heads.items()) if h.startswith(key)), None)
+                    if hit is not None:
+                        column[field] = hit
+                        break
+            # Every field must be found, each in a cell of its own, or the
+            # mapping is wrong and values would be filed under the wrong names.
+            if len(column) != len(_GAS_FIELDS) or len(set(column.values())) != len(column):
+                raise ValueError(
+                    f"gas headings not recognised in {path}; read: "
+                    + ", ".join(heads[i] for i in sorted(heads))
+                )
+
+            for ln in lines[first:]:
+                label = ln[0][2].upper()
+                if label not in MONTHS and label != "TOTAL":
+                    continue
+                cells: dict[int, str] = {}
+                for x0, x1, t in ln[1:]:
+                    if _is_value(t):
+                        cells[cell_of(x1)] = t
+                values = {f: _number(cells.get(c)) for f, c in column.items()}
+                if label == "TOTAL":
+                    totals = {f: v for f, v in values.items() if v is not None}
+                    continue
+                # Months NUPRC has not published yet are dashed across the
+                # row, and #DIV/0! in the percentage columns. They are
+                # skipped, not written as zero.
+                if all(v is None for v in values.values()):
+                    continue
+                rows.append({"month": label, **values})
 
     if not rows:
         raise ValueError(
